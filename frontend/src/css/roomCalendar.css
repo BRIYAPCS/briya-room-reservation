@@ -1,0 +1,313 @@
+/* ============================================================
+   ROOM CALENDAR — BRIYA STYLING
+   ============================================================ */
+
+.room-calendar-wrapper {
+  width: 100%;
+  max-width: 1600px;
+
+  background: #ffffff;
+  border-radius: 16px;
+
+  padding: 20px 20px 24px;
+  margin: 0 auto;
+
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+}
+
+/* Breadcrumb spacing inside calendar card */
+.calendar-breadcrumbs {
+  margin-bottom: 12px;
+}
+
+/* Loading state */
+.calendar-loading {
+  padding: 48px;
+  text-align: center;
+  font-size: 1.1rem;
+  color: #000000;
+}
+
+/* ============================================================
+   TOOLBAR (TOP CONTROLS) — GRID-BASED CENTERING (FINAL FIX)
+   ============================================================ */
+
+/*
+  Layout structure:
+  [ Left buttons ] [ Centered date label ] [ Right buttons ]
+
+  Why this works:
+  • No absolute positioning
+  • No overlap
+  • Fully responsive
+  • Breadcrumbs unaffected
+*/
+
+.rbc-toolbar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+
+  margin-bottom: 16px;
+}
+
+/* Date range label (e.g. "December 22 – 26") */
+.rbc-toolbar-label {
+  justify-self: center;
+
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+
+  white-space: nowrap;
+}
+
+/* Button groups */
+.rbc-btn-group {
+  display: flex;
+  gap: 6px;
+}
+
+/* Toolbar buttons */
+.rbc-btn-group button {
+  background: #f3f4f6;
+  border: 1px solid #060607;
+  border-radius: 8px;
+
+  padding: 6px 12px;
+  font-size: 0.85rem;
+
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.rbc-btn-group button:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+.rbc-btn-group button.rbc-active {
+  background: #2563eb;
+  color: #030202;
+  border-color: #2563eb;
+}
+
+/* Mobile safety */
+@media (max-width: 640px) {
+  .rbc-toolbar-label {
+    font-size: 0.95rem;
+  }
+}
+
+/* ============================================================
+   TIME GRID
+   ============================================================ */
+
+.rbc-time-view {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Left time gutter */
+.rbc-time-gutter {
+  background: #f9fafb;
+  font-size: 0.8rem;
+  color: #050505;
+}
+
+/* Day headers */
+.rbc-time-header {
+  background: #f9fafb;
+  font-weight: 1000;
+  font-size: 0.85rem;
+  color: black;
+}
+
+/* Today highlight */
+.rbc-today {
+  background-color: #eff6ff;
+}
+
+/* ============================================================
+   EVENTS (RESERVATIONS)
+   ============================================================ */
+
+.rbc-event {
+  background-color: #2563eb;
+  border-radius: 8px;
+  padding: 4px 6px;
+
+  font-size: 0.8rem;
+  line-height: 1.2;
+
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+}
+
+.rbc-event-content {
+  font-weight: 600;
+}
+
+/* ============================================================
+   MONTH VIEW CLEANUP
+   ============================================================ */
+
+.rbc-month-view {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.rbc-date-cell {
+  padding: 6px;
+  font-size: 0.75rem;
+  color: #050505;
+}
+
+/* ============================================================
+   MOBILE ADJUSTMENTS
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .room-calendar-wrapper {
+    padding: 14px;
+  }
+
+  .rbc-toolbar {
+    gap: 8px;
+  }
+
+  .rbc-toolbar-label {
+    font-size: 1rem;
+  }
+}
+
+/* ============================================================
+   BREADCRUMBS — CALENDAR ONLY (CENTERED & RESPONSIVE)
+   ============================================================ */
+
+/* Breadcrumb wrapper inside calendar card */
+.room-calendar-wrapper .calendar-breadcrumbs {
+  display: flex;
+  justify-content: center; /* center horizontally */
+  margin-bottom: 0px;
+}
+
+/* Breadcrumb nav itself */
+.room-calendar-wrapper .breadcrumbs {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* center content */
+  flex-wrap: wrap; /* allow wrapping on small screens */
+  gap: 6px;
+
+  text-align: center;
+
+  color: #1f2937; /* slate-800 */
+  font-size: 0.85rem;
+}
+
+/* Clickable breadcrumb links */
+.room-calendar-wrapper .breadcrumbs a {
+  color: #2563eb; /* Briya blue */
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap; /* prevent awkward word breaks */
+}
+
+/* Hover effect */
+.room-calendar-wrapper .breadcrumbs a:hover {
+  text-decoration: underline;
+}
+
+/* Separator (›) */
+.room-calendar-wrapper .breadcrumbs span {
+  color: #9ca3af; /* gray-400 */
+  white-space: nowrap;
+}
+
+/* Current (last) breadcrumb */
+.room-calendar-wrapper .breadcrumbs span:last-child {
+  color: #111827; /* near-black */
+  font-weight: 600;
+}
+
+/* ============================================================
+   MOBILE OPTIMIZATION
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .room-calendar-wrapper .breadcrumbs {
+    font-size: 0.8rem;
+    gap: 4px;
+  }
+}
+
+/* ============================================================
+   Disabled weekend cells — CLEAN VERSION
+   ============================================================ */
+
+/* Applies ONLY to day columns & slots */
+.calendar-weekend-disabled {
+  background-color: #f1f5f9; /* soft slate */
+}
+
+/* Dark mode / card contrast improvement */
+.room-calendar-wrapper .calendar-weekend-disabled {
+  background-color: #eef2f7;
+}
+
+/* Prevent interaction */
+.calendar-weekend-disabled {
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------
+   IMPORTANT:
+   Do NOT affect time gutter
+------------------------------------------------------------ */
+.rbc-time-gutter .calendar-weekend-disabled {
+  background-color: transparent !important;
+  pointer-events: auto;
+  font-weight: 500;
+}
+
+/* Hide the All-day header cell and row */
+.rbc-time-header .rbc-allday-cell,
+.rbc-row.rbc-allday-row,
+.rbc-allday-events {
+  display: none !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+}
+
+/* ---------------------------------------------------------------------------
+   RECURRENCE VISUAL INDICATOR
+   ---------------------------------------------------------------------------
+   Applied to calendar events that are instances of a recurrence rule.
+
+   Purpose:
+   • Visually distinguish recurring reservations
+   • Reinforce that these events behave differently
+   • Prepare users for future "Edit series" functionality
+--------------------------------------------------------------------------- */
+.calendar-event-recurring {
+  border-left: 4px solid #7c3aed; /* Purple accent for recurrence */
+  opacity: 0.85;
+}
+
+/* ============================================================
+   CALENDAR LOCK STATE
+   ------------------------------------------------------------
+   • Applied when PIN modal is open
+   • Visually keeps calendar visible
+   • Prevents ALL interaction
+============================================================ */
+
+.calendar-locked {
+  pointer-events: none; /* ⛔ No clicks, no drag */
+  user-select: none;
+  filter: blur(0.5px); /* Optional visual cue */
+}

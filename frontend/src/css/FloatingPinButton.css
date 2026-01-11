@@ -1,0 +1,34 @@
+/* ============================================================================
+   FLOATING PIN BUTTON
+   ----------------------------------------------------------------------------
+   • Always visible login / access control
+   • Responsive for mobile + desktop
+============================================================================ */
+
+.floating-pin-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  font-size: 18px;
+  z-index: 9000;
+}
+
+.floating-pin-btn:hover {
+  background: #f3f4f6;
+}
+
+/* Slightly larger on desktop */
+@media (min-width: 1024px) {
+  .floating-pin-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+}

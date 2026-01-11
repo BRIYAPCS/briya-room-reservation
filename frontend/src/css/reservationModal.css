@@ -1,0 +1,418 @@
+/* =============================================================================
+   RESERVATION MODAL — BASE STYLES
+   -----------------------------------------------------------------------------
+   Purpose:
+   • Provide a focused modal experience for reservation creation/editing
+   • Visually isolate modal from calendar & background UI
+   • Keep styles scoped (rr-* namespace) to avoid global collisions
+   • Safe for reuse and extension (recurrence, approvals, permissions)
+============================================================================= */
+
+/* =============================================================================
+   MODAL OVERLAY — FULL VIEWPORT, ALWAYS
+   -----------------------------------------------------------------------------
+   • Covers entire viewport reliably (desktop + mobile)
+   • Prevents interaction with background content
+   • Dark backdrop improves focus and readability
+============================================================================= */
+.rr-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+
+  width: 100vw;
+  height: 100vh;
+
+  background: rgba(0, 0, 0, 0.55);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Force above header, footer, calendar popups */
+  z-index: 9999;
+}
+
+/* =============================================================================
+   MODAL CONTAINER
+   -----------------------------------------------------------------------------
+   • Desktop: centered card
+   • Mobile: full-screen sheet
+   • Uses flex layout to enable sticky header/footer
+============================================================================= */
+.rr-modal {
+  position: relative;
+
+  width: min(560px, 92vw);
+  max-height: 90vh;
+
+  background: #ffffff;
+  border-radius: 16px;
+
+  display: flex;
+  flex-direction: column;
+
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+
+  /* Required so body scrolls, not the page */
+  overflow: hidden;
+}
+
+/* =============================================================================
+   MODAL HEADER (STICKY)
+   -----------------------------------------------------------------------------
+   • Always visible while scrolling
+   • Room name / title centered
+============================================================================= */
+.rr-modal-header {
+  position: sticky;
+  top: 0;
+
+  background: #ffffff;
+  z-index: 2;
+
+  padding: 16px 48px 12px;
+
+  text-align: center;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* =============================================================================
+   CLOSE BUTTON (TOP-RIGHT)
+============================================================================= */
+.rr-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.rr-modal-close:hover {
+  background: #f3f4f6;
+}
+
+/* =============================================================================
+   MODAL BODY (SCROLLABLE CONTENT)
+   -----------------------------------------------------------------------------
+   • All form fields live here
+   • Scrolls independently of header/footer
+============================================================================= */
+.rr-modal-body {
+  padding: 0 16px 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* =============================================================================
+   FORM LAYOUT
+============================================================================= */
+.rr-field {
+  margin-bottom: 12px;
+}
+
+.rr-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.rr-field label {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 6px;
+  color: #374151;
+}
+
+/* =============================================================================
+   INPUTS & SELECTS — UNIFIED STYLING
+============================================================================= */
+.rr-field input,
+.rr-field textarea,
+.rr-field select {
+  width: 100%;
+  padding: 10px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+
+  font-size: 0.95rem;
+  background-color: #ffffff;
+  color: #111827;
+
+  /* Normalize appearance across browsers */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+/* =============================================================================
+   SELECT (TIME DROPDOWN) — CUSTOM ARROW & ALIGNMENT
+============================================================================= */
+.rr-field select {
+  cursor: pointer;
+
+  /* Custom dropdown arrow */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z' clip-rule='evenodd'/%3E%3C/svg%3E");
+
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+
+  padding-right: 36px; /* space for arrow */
+}
+
+/* =============================================================================
+   FOCUS STATES (INPUTS + SELECTS)
+============================================================================= */
+.rr-field input:focus,
+.rr-field select:focus,
+.rr-field textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+/* =============================================================================
+   ERROR MESSAGES
+============================================================================= */
+.rr-errors {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+/* =============================================================================
+   MODAL FOOTER (STICKY ACTION BAR)
+   -----------------------------------------------------------------------------
+   • Always visible
+   • Buttons never disappear on small screens
+============================================================================= */
+.rr-modal-footer {
+  position: sticky;
+  bottom: 0;
+
+  background: #ffffff;
+  padding: 12px 16px;
+
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+
+  border-top: 1px solid #e5e7eb;
+}
+
+/* =============================================================================
+   BUTTONS
+============================================================================= */
+.rr-btn {
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: none;
+}
+
+.rr-btn-primary {
+  background: #111827;
+  color: #ffffff;
+}
+
+.rr-btn-secondary {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+/* =============================================================================
+   RECURRENCE UI (UI-ONLY FOR NOW)
+============================================================================= */
+.rr-recurring {
+  margin: 12px 0;
+  color: #374151;
+}
+
+.rr-recurring-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.rr-recurring-panel {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 10px;
+}
+
+.rr-recurring-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 10px;
+  color: #374151;
+}
+
+/* =============================================================================
+   MOBILE OPTIMIZATION
+   -----------------------------------------------------------------------------
+   • Turns modal into full-screen sheet
+   • Stacks form fields
+   • Makes buttons full-width
+============================================================================= */
+@media (max-width: 768px) {
+  .rr-modal {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
+
+  .rr-field-row {
+    grid-template-columns: 1fr;
+  }
+
+  .rr-modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .rr-btn {
+    width: 100%;
+  }
+}
+
+/* =============================================================================
+   STYLING FOR HINT TEXT START DATE AND TIME INPUTS MODAL WINDOW
+============================================================================= */
+.rr-hint {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 6px;
+  font-style: italic;
+}
+
+/* =============================================================================
+   SELECT INTERACTION ANIMATION - Subtle dropdown open animation Modal Window
+============================================================================= */
+.rr-field select {
+  transition: box-shadow 160ms ease, border-color 160ms ease,
+    transform 120ms ease;
+}
+
+.rr-field select:focus {
+  transform: scale(1.01);
+}
+
+/* ==================================================================================
+   DISABLED TIME OPTIONS (VISUAL ONLY) - Subtle dropdown open animation Modal Window
+==================================================================================== */
+.rr-field select option:disabled {
+  color: #9ca3af; /* muted gray */
+  background-color: #f9fafb;
+  cursor: not-allowed;
+}
+
+/* =============================================================================
+   iOS SAFARI SELECT FIXES - Subtle dropdown open animation Modal Window
+============================================================================= */
+@supports (-webkit-touch-callout: none) {
+  .rr-field select {
+    font-size: 16px; /* Prevents zoom */
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* --------------------------------------------------
+   ATTENDEE EMAIL CHIPS - Modal Window - Reservation
+-------------------------------------------------- */
+.rr-chips-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.rr-chip {
+  background: #e5f0ff;
+  color: #1e3a8a;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rr-chip button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.rr-hint {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.rr-error {
+  font-size: 0.8rem;
+  color: #dc2626;
+}
+
+/* ===============================================================
+   MODAL SHAKE — ERROR ATTENTION
+================================================================ */
+@keyframes rr-shake {
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.rr-modal.shake {
+  animation: rr-shake 0.35s ease;
+}
+
+/* ===============================================================
+   INPUT ERROR STATE
+================================================================ */
+.rr-input-error {
+  border: 2px solid #dc2626;
+  background: #fff5f5;
+}
+
+/* ===============================================================
+   CRITICAL ERROR BANNER
+================================================================ */
+.rr-errors-critical {
+  border-left: 6px solid #dc2626;
+  padding: 12px;
+}

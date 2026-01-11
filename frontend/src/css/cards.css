@@ -1,0 +1,202 @@
+/* ===============================================================
+   CARDS GRID + CARD STYLES (OPTIMIZED + LAZY IMAGE VERSION)
+================================================================ */
+
+/* ===============================================================
+   BASE GRID CONTAINER
+================================================================ */
+.cards-container {
+  display: grid;
+  gap: 24px;
+
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+
+  width: 100%;
+  padding: 10px;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  justify-items: center;
+  will-change: transform, opacity;
+}
+
+/* ===============================================================
+   PAGE-SPECIFIC GRID OVERRIDES
+================================================================ */
+
+.cards-container.cards--sites {
+  max-width: 1650px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.cards-container.cards--rooms {
+  max-width: 1200px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 340px));
+  justify-content: center;
+  justify-items: center;
+}
+
+/* ===============================================================
+   CARD BASE STYLE
+================================================================ */
+.card {
+  width: 100%;
+  max-width: 340px;
+
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+
+  cursor: pointer;
+  background: lightgray;
+
+  opacity: 0;
+  transform: translateY(20px);
+
+  box-shadow: 0 0 0 2px #ffffff, 0 8px 20px rgba(0, 0, 0, 0.18);
+  transition: transform 0.35s ease, box-shadow 0.35s ease, opacity 0.35s ease;
+
+  will-change: transform, opacity, box-shadow;
+}
+
+/* ===============================================================
+   CARD REVEAL ANIMATION
+================================================================ */
+.card.animate {
+  animation: cardFadeIn 0.55s ease forwards;
+  animation-delay: calc(var(--i) * 70ms);
+}
+
+@keyframes cardFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ===============================================================
+   CARD IMAGE (UPDATED FOR <img> + LAZY LOADING)
+================================================================ */
+.card-image {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+
+  /* Animation preserved */
+  opacity: 0;
+  transform: scale(1.12);
+  animation: imageReveal 0.8s ease forwards;
+
+  will-change: opacity, transform;
+}
+
+/* 🔥 NEW: image styling */
+.card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* keeps original background-image behavior */
+  display: block;
+}
+
+/* Image reveal animation */
+@keyframes imageReveal {
+  0% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ===============================================================
+   CARD LABEL
+================================================================ */
+.card-label {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  padding: 8px 10px;
+
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1rem, 2.2vw, 1.45rem);
+
+  color: #fff;
+  background: rgba(0, 0, 0, 0.85);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  border-bottom-left-radius: 14px;
+  border-bottom-right-radius: 14px;
+
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  will-change: transform, opacity;
+}
+
+/* ===============================================================
+   ASPECT RATIOS
+================================================================ */
+.cards--sites .card {
+  aspect-ratio: 3 / 4;
+}
+
+.cards--rooms .card {
+  aspect-ratio: 16 / 10;
+}
+
+/* ===============================================================
+   RESPONSIVE DESIGN
+================================================================ */
+@media (min-width: 601px) {
+  .cards-container {
+    padding: 24px;
+  }
+}
+
+/* SITES */
+@media (max-width: 768px) {
+  .cards-container.cards--sites {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 600px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .cards-container.cards--sites {
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 900px;
+  }
+}
+
+/* ROOMS */
+@media (max-width: 480px) {
+  .cards-container.cards--rooms {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ===============================================================
+   REDUCED MOTION SUPPORT
+================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card-image {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+    transition: none !important;
+  }
+}

@@ -1,0 +1,131 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+
+/* ============================================================
+   GLOBAL RESET & BASE STYLES
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ============================================================================
+   GLOBAL HEIGHT FIX
+   Ensures modals and overlaysufJ overlays can cover full viewport
+============================================================================ */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+/* ============================================================
+   CUSTOM PROFESSIONAL FONTS
+   Inter (UI font) + Plus Jakarta Sans (Display font)
+   ============================================================ */
+
+/* Font variables for consistent typography */
+:root {
+  --font-base: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+
+  --font-display: "Plus Jakarta Sans", system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* ============================================================
+   BASE TYPOGRAPHY + BACKGROUND
+   ============================================================ */
+
+body {
+  overflow-x: hidden;
+
+  /* Global default font */
+  font-family: var(--font-base);
+  font-weight: 400;
+
+  background-color: #0a7fc2;
+  color: #ffffff;
+
+  /* Improve text rendering on Windows + Mac */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Uncomment if needed for tiny screens  
+@media (max-height: 500px) {
+  .back-button-wrapper.floating {
+    margin-bottom: 6px;
+  }
+}
+*/
+
+/* ============================================================
+   SPACING SCALE UTILITIES
+   These allow consistent spacing across the entire project
+   ============================================================ */
+
+/* Padding */
+.p-8 {
+  padding: 8px;
+}
+.p-16 {
+  padding: 16px;
+}
+.p-24 {
+  padding: 24px;
+}
+.p-32 {
+  padding: 32px;
+}
+
+/* Padding top/bottom */
+.pt-8 {
+  padding-top: 8px;
+}
+.pt-16 {
+  padding-top: 16px;
+}
+.pt-24 {
+  padding-top: 24px;
+}
+.pt-32 {
+  padding-top: 32px;
+}
+
+.pb-8 {
+  padding-bottom: 8px;
+}
+.pb-16 {
+  padding-bottom: 16px;
+}
+.pb-24 {
+  padding-bottom: 24px;
+}
+.pb-32 {
+  padding-bottom: 32px;
+}
+
+/* Padding left/right */
+.pl-16 {
+  padding-left: 16px;
+}
+.pr-16 {
+  padding-right: 16px;
+}
+
+/* Margin */
+.m-8 {
+  margin: 8px;
+}
+.m-16 {
+  margin: 16px;
+}
+.m-24 {
+  margin: 24px;
+}
+.m-32 {
+  margin: 32px;
+}

@@ -1,0 +1,272 @@
+/* ============================================================
+   BACK BUTTON — Floating, Responsive, Accessible
+   ------------------------------------------------------------
+   Improvements:
+   • Uses display font for a more premium UI look
+   • Added will-change for smoother animations (GPU-friendly)
+   • Better icon sizing rules
+   • Cleaner mobile adjustments
+   • Safer logic on very small screens (landscape phones)
+   • Backdrop-filter fallback refined for better contrast
+=========================================================== */
+
+/* ============================================================
+   BASE BUTTON STYLE (works for floating + inline modes)
+=========================================================== */
+.back-button {
+  background-color: #ffffff15;
+  border: 1px solid #ffffff33;
+  color: #ffffff;
+
+  /* Typography */
+  font-family: var(--font-display);
+  font-size: clamp(0.95rem, 1.5vw, 1.15rem);
+  font-weight: 600;
+
+  /* Sizing */
+  padding: clamp(10px, 1.2vw, 14px) clamp(18px, 2vw, 24px);
+  border-radius: 50px;
+  min-height: 44px;
+  line-height: 1.2;
+
+  /* Layout */
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(8px, 1.4vw, 12px);
+  cursor: pointer;
+
+  /* Visual depth */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+
+  /* Motion */
+  transition: background 0.25s ease, box-shadow 0.25s ease, transform 0.22s ease;
+  will-change: transform, opacity, box-shadow, background;
+}
+
+/* Hover (desktop) */
+.back-button:hover {
+  background-color: #ffffff25;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Active state */
+.back-button:active {
+  transform: translateY(0);
+}
+
+/* Focus-visible (keyboard navigation) */
+.back-button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.35);
+}
+
+/* ============================================================
+   ICON
+=========================================================== */
+.back-arrow svg {
+  width: clamp(18px, 2.3vw, 22px);
+  height: clamp(18px, 2.3vw, 22px);
+  flex: 0 0 auto;
+}
+
+/* ============================================================
+   LABEL VISIBILITY LOGIC
+   - Desktop: show long label
+   - Medium screens: show short label
+   - Very small screens: icon only
+=========================================================== */
+
+/* Default: long label visible */
+.back-label--long {
+  display: inline;
+}
+.back-label--short {
+  display: none;
+}
+
+/* Medium screens: “Back” replaces long label */
+@media (max-width: 900px) {
+  .back-label--long {
+    display: none;
+  }
+  .back-label--short {
+    display: inline;
+  }
+}
+
+/* Small screens: hide all labels → icon-only */
+@media (max-width: 520px) {
+  .back-label--long,
+  .back-label--short {
+    display: none;
+  }
+
+  .back-button {
+    padding: clamp(10px, 2vw, 12px) clamp(14px, 3vw, 16px);
+    gap: clamp(6px, 1.2vw, 8px);
+  }
+
+  .back-arrow svg {
+    width: clamp(20px, 3vw, 24px);
+    height: clamp(20px, 3vw, 24px);
+  }
+}
+
+/* ============================================================
+   FLOATING WRAPPER — Positioned relative to header height
+=========================================================== */
+.back-button-wrapper.floating {
+  position: fixed;
+  z-index: 2147483647;
+
+  --offset: 24px;
+
+  top: calc(
+    env(safe-area-inset-top, 0px) + var(--header-height) + var(--offset)
+  );
+  left: calc(env(safe-area-inset-left, 0px) + var(--offset));
+
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  will-change: transform, opacity;
+}
+
+/* Right corner variant */
+.back-button-wrapper.floating.corner-right {
+  left: auto;
+  right: calc(env(safe-area-inset-right, 0px) + var(--offset));
+}
+
+/* Reset left corner */
+.back-button-wrapper.floating.corner-left {
+  right: auto;
+  left: calc(env(safe-area-inset-left, 0px) + var(--offset));
+}
+
+/* Visibility toggles */
+.back-button-wrapper.floating.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.back-button-wrapper.floating.hide {
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+}
+
+/* ============================================================
+   ADAPTIVE OFFSETS (smaller screens = tighter spacing)
+=========================================================== */
+@media (max-width: 600px) {
+  .back-button-wrapper.floating,
+  .back-button-wrapper.floating.corner-left,
+  .back-button-wrapper.floating.corner-right {
+    --offset: clamp(12px, 4vw, 16px);
+    top: calc(
+      env(safe-area-inset-top, 0px) + var(--header-height) + var(--offset)
+    );
+  }
+}
+
+/* ============================================================
+   LANDSCAPE PHONES (very short height)
+   → Move button to BOTTOM LEFT to avoid covering content
+=========================================================== */
+@media (max-height: 500px) {
+  .back-button-wrapper.floating,
+  .back-button-wrapper.floating.corner-left,
+  .back-button-wrapper.floating.corner-right {
+    top: auto;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--offset));
+    left: calc(env(safe-area-inset-left, 0px) + var(--offset));
+    right: auto;
+    transform: translateY(10px);
+  }
+
+  .back-button-wrapper.floating.show {
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================
+   Glass effect + fallback
+=========================================================== */
+
+@supports (backdrop-filter: blur(6px)) or (-webkit-backdrop-filter: blur(6px)) {
+  .back-button {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+}
+
+/* Fallback for browsers without backdrop-filter */
+@supports not (backdrop-filter: blur(6px)) {
+  .back-button {
+    background-color: rgba(255, 255, 255, 0.28);
+  }
+}
+
+/* ============================================================
+   REDUCED MOTION SUPPORT
+=========================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .back-button,
+  .back-button-wrapper.floating {
+    transition: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* ============================================================
+   INLINE BACK BUTTON (Header variant)
+=========================================================== */
+.back-button.inline {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: #fff;
+
+  cursor: pointer;
+}
+
+.back-button.inline .back-arrow svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Hide inline labels on small screens */
+@media (max-width: 520px) {
+  .back-button.inline .back-label--long,
+  .back-button.inline .back-label--short {
+    display: none;
+  }
+}
+
+/* ============================================================
+   MOBILE SAFETY FALLBACK
+   Ensures back button never overlaps header
+============================================================ */
+@media (max-width: 520px) {
+  .back-button-wrapper.floating {
+    top: calc(
+      env(safe-area-inset-top, 0px) + max(var(--header-height, 72px), 80px) +
+        var(--offset)
+    );
+  }
+}

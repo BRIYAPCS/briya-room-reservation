@@ -1,0 +1,16 @@
+{
+  "name": "briya-room-reservations",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k -n BACKEND,WORKER,FRONTEND -c blue,magenta,green \"npm run dev --prefix backend\" \"npm run worker --prefix backend\" \"npm run dev --prefix frontend\"",
+    "backend": "npm run dev --prefix backend",
+    "worker": "npm run worker --prefix backend",
+    "frontend": "npm run dev --prefix frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  },
+  "dependencies": {
+    "@lottiefiles/dotlottie-react": "^0.17.10"
+  }
+}

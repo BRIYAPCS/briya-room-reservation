@@ -1,0 +1,125 @@
+/* ==================================================
+   GLOBAL FOOTER — Professional, Responsive, Smooth
+   --------------------------------------------------
+   Improvements:
+   • Uses global base font for consistent branding
+   • Better text rendering & readability
+   • Refined animations (GPU-friendly)
+   • More consistent timing with Header & Cards
+   • Cleaner hover logic (desktop only)
+   • Reduced layout shift + improved spacing
+================================================== */
+
+.footer {
+  text-align: center;
+
+  /* Professional base font */
+  font-family: var(--font-base);
+  font-weight: 500;
+
+  font-size: clamp(0.85rem, 1.5vw, 1rem);
+  padding: 12px;
+  margin-bottom: clamp(20px, 4vw, 32px);
+
+  opacity: 0;
+
+  /* Entrance animation (initial load) */
+  animation: footerFadeIn 0.65s ease forwards;
+  animation-delay: 0.35s;
+
+  /* Boost animation smoothness */
+  will-change: opacity, transform;
+
+  /* Improve clarity on all displays */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hover effect (desktop-only for elegance) */
+@media (hover: hover) {
+  .footer:hover {
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.45);
+    transform: scale(1.02);
+    transition: transform 0.25s ease, text-shadow 0.25s ease;
+  }
+}
+
+/* Mobile refinement */
+@media (max-width: 480px) {
+  .footer {
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+}
+
+/* ==================================================
+   FOOTER FADE-IN ANIMATION (initial render)
+================================================== */
+@keyframes footerFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==================================================
+   PAGE TRANSITION — FORWARD NAVIGATION
+================================================== */
+.footer-transition.page-enter.forward {
+  animation: footerEnterForward 0.45s ease forwards;
+}
+
+@keyframes footerEnterForward {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) translateX(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) translateX(0);
+  }
+}
+
+/* ==================================================
+   PAGE TRANSITION — BACK NAVIGATION
+================================================== */
+.footer-transition.page-enter.back {
+  animation: footerEnterBack 0.45s ease forwards;
+}
+
+@keyframes footerEnterBack {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) translateX(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) translateX(0);
+  }
+}
+
+/* ==================================================
+   PAGE EXIT (navigation away)
+================================================== */
+.footer-transition.page-exit {
+  animation: footerExit 0.35s ease forwards;
+}
+
+@keyframes footerExit {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}

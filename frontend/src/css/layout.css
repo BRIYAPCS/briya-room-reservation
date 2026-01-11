@@ -1,0 +1,175 @@
+/* ========================================================
+   APPLICATION LAYOUT (GLOBAL STRUCTURE)
+   ======================================================== */
+
+.layout {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+/* ========================================================
+   MAIN PAGE BODY
+   ========================================================
+   - Vertical stacking
+   - Clean centering
+   - Proper spacing under header
+======================================================== */
+
+.body {
+  display: flex;
+  flex-direction: column; /* Stack vertically */
+  align-items: center; /* Center horizontally */
+  justify-content: flex-start;
+  width: 100%;
+  padding-top: 20px; /* Standard spacing below header */
+}
+
+.body--compact {
+  margin-top: 10px;
+  padding-top: 20px;
+  padding-bottom: 40px; /* Spacing above footer */
+}
+
+/* ========================================================
+   OPTIONAL RESPONSIVE CONTAINERS
+   (Not used for Cards grid — preserves full 5-card layout)
+======================================================== */
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 10px;
+}
+
+.container-xs {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+.container-sm {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+.container-md {
+  max-width: 768px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+.container-lg {
+  max-width: 1024px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+.container-xl {
+  max-width: 1680px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* ========================================================
+   ROUTE TRANSITION SYSTEM (ENTER + EXIT)
+   ========================================================
+   - Activated via App.jsx using:
+        <div class="page-wrapper page-enter forward">
+        <div class="page-wrapper page-enter back">
+        <div class="page-wrapper page-exit">
+   - Provides cinematic fade + slide animations
+   - Will-change improves GPU acceleration
+======================================================== */
+
+.page-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  will-change: opacity, transform; /* PERFORMANCE BOOST */
+}
+
+/* --------------------------------------------
+   ENTER ANIMATION
+   Triggered when transitionStage === "page-enter"
+   Smooth upward fade-in, matches header/footer motion
+--------------------------------------------- */
+.page-wrapper.page-enter {
+  opacity: 0;
+  animation: pageEnter 0.45s ease forwards;
+}
+
+@keyframes pageEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-1px); /* micro overshoot */
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --------------------------------------------
+   EXIT ANIMATION
+   Triggered when transitionStage === "page-exit"
+   Updated to a more subtle transition (20px was too strong)
+--------------------------------------------- */
+.page-wrapper.page-exit {
+  animation: pageExit 0.35s ease forwards;
+  pointer-events: none; /* prevent clicks during exit */
+}
+
+@keyframes pageExit {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(10px); /* subtler, cleaner exit */
+  }
+}
+
+/* ========================================================
+   OPTIONAL iOS-STYLE DIRECTIONAL SLIDE TRANSITIONS
+   ========================================================
+   These only activate if App.jsx applies the classes:
+     - .page-transition.slide-left (for forward nav)
+     - .page-transition.reverse (for back nav)
+   You asked for swipe gestures — App.jsx now supports that.
+   If you want slide animations for swipes, these are ready.
+======================================================== */
+
+/* Forward navigation → Slide LEFT */
+.page-transition.slide-left {
+  animation: slideLeft 0.35s ease forwards;
+}
+
+@keyframes slideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Back navigation → Slide RIGHT */
+.page-transition.reverse {
+  animation: slideRight 0.35s ease forwards;
+}
+
+@keyframes slideRight {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

@@ -1,0 +1,437 @@
+/* ===============================================================
+   FLOATING HELP BUTTON + PANEL
+   (Responsive, accessible, enterprise-safe)
+================================================================ */
+
+/* ===============================================================
+   BASE FLOATING HELP BUTTON
+================================================================ */
+.help-fab {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 50;
+
+  width: 52px;
+  height: 52px;
+
+  border-radius: 50%;
+  border: none;
+
+  background: #1f2937; /* dark neutral */
+  color: #ffffff;
+
+  font-size: 22px;
+  font-weight: bold;
+
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+
+  transition: transform 0.2s ease, box-shadow 0.2s ease,
+    background-color 0.2s ease;
+
+  will-change: transform, box-shadow;
+}
+
+.help-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Keyboard accessibility */
+.help-fab:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 3px;
+}
+
+/* ===============================================================
+   HELP PANEL (BASE — DESKTOP / TABLET FLOATING PANEL)
+================================================================ */
+.help-panel {
+  position: fixed;
+  bottom: 88px;
+  right: 20px;
+  z-index: 51;
+
+  width: 280px;
+  padding: 16px;
+
+  background: #ffffff;
+  color: #111827;
+
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+
+  font-size: 0.95rem;
+}
+
+.help-panel h3 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.help-panel ul {
+  padding-left: 18px;
+  margin: 0;
+}
+
+.help-panel li {
+  margin-bottom: 8px;
+}
+
+.help-close {
+  margin-top: 12px;
+  width: 100%;
+}
+
+/* ===============================================================
+   RESPONSIVE DESIGN — MATCHES cards.css PHILOSOPHY
+================================================================ */
+
+/* ---------------------------------------------------------------
+   SMALL MOBILE (≤ 480px)
+   (button + panel sizing only — NOT behavior)
+---------------------------------------------------------------- */
+@media (max-width: 480px) {
+  .help-fab {
+    bottom: 14px;
+    right: 14px;
+
+    width: 44px;
+    height: 44px;
+
+    font-size: 18px;
+  }
+
+  .help-panel {
+    bottom: 68px;
+    right: 14px;
+
+    width: calc(100vw - 28px);
+    max-width: 320px;
+  }
+}
+
+/* ---------------------------------------------------------------
+   MOBILE / SMALL TABLET (481px – 768px)
+---------------------------------------------------------------- */
+@media (min-width: 481px) and (max-width: 768px) {
+  .help-fab {
+    bottom: 18px;
+    right: 18px;
+
+    width: 48px;
+    height: 48px;
+
+    font-size: 20px;
+  }
+
+  .help-panel {
+    bottom: 78px;
+    right: 18px;
+  }
+}
+
+/* ---------------------------------------------------------------
+   TABLET / SMALL DESKTOP (769px – 1024px)
+---------------------------------------------------------------- */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .help-fab {
+    bottom: 22px;
+    right: 22px;
+
+    width: 52px;
+    height: 52px;
+
+    font-size: 22px;
+  }
+
+  .help-panel {
+    bottom: 88px;
+    right: 22px;
+  }
+}
+
+/* ---------------------------------------------------------------
+   LARGE DESKTOP (≥ 1025px)
+---------------------------------------------------------------- */
+@media (min-width: 1025px) {
+  .help-fab {
+    bottom: 24px;
+    right: 24px;
+
+    width: 56px;
+    height: 56px;
+
+    font-size: 24px;
+  }
+
+  .help-panel {
+    bottom: 96px;
+    right: 24px;
+  }
+}
+
+/* ===============================================================
+   MOBILE GUIDED HELP — BOTTOM SHEET MODE
+   (Behavior override — must come AFTER base styles)
+================================================================ */
+
+/* IMPORTANT:
+   This overrides ONLY the help-panel behavior on small screens.
+   Button styles remain unchanged.
+*/
+@media (max-width: 600px) {
+  .help-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    width: 100%;
+    max-width: none;
+
+    border-radius: 16px 16px 0 0;
+    padding: 16px 16px 20px;
+
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.25);
+
+    max-height: 40vh;
+    overflow-y: auto;
+
+    animation: slideUpHelp 0.25s ease-out;
+  }
+
+  .help-panel h3 {
+    font-size: 1rem;
+  }
+
+  .help-panel ul {
+    padding-left: 16px;
+  }
+
+  .help-panel li {
+    font-size: 0.95rem;
+  }
+
+  .help-close {
+    margin-top: 12px;
+    font-size: 1rem;
+  }
+}
+
+/* Slide-up animation */
+@keyframes slideUpHelp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* ===============================================================
+   REDUCED MOTION SUPPORT
+================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .help-fab {
+    transition: none;
+  }
+}
+
+/* ===============================================================
+   HELP VIDEO OVERLAY (FULLSCREEN MODAL)
+   Responsive • Accessible • Performance-safe
+================================================================ */
+
+/* ===============================================================
+   BASE OVERLAY
+================================================================ */
+.help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.55);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 16px;
+}
+
+/* ===============================================================
+   BASE MODAL CONTENT
+================================================================ */
+.help-overlay-content {
+  position: relative;
+
+  width: 100%;
+  max-width: 800px;
+
+  background: #111827;
+  color: #ffffff;
+
+  padding: 20px;
+  border-radius: 16px;
+
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+
+  display: flex;
+  flex-direction: column;
+}
+
+.help-overlay-content h2 {
+  margin: 0 0 12px;
+  font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+}
+
+.help-overlay-content video {
+  width: 100%;
+  height: auto;
+
+  max-height: 60vh;
+  object-fit: contain;
+
+  border-radius: 12px;
+}
+
+.help-overlay-hint {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+/* ===============================================================
+   CLOSE BUTTON (IMPROVED UX + ACCESSIBILITY)
+================================================================ */
+.help-overlay-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+
+  /* Larger hit area for touch devices */
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+  border: none;
+
+  background: rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+
+  font-size: 18px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  transition: background-color 0.2s ease, transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* Hover (desktop) */
+.help-overlay-close:hover {
+  background: rgba(0, 0, 0, 0.75);
+  transform: scale(1.05);
+}
+
+/* Active (touch feedback) */
+.help-overlay-close:active {
+  transform: scale(0.95);
+}
+
+/* Keyboard accessibility */
+.help-overlay-close:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+/* ===============================================================
+   MOBILE ADJUSTMENTS
+================================================================ */
+@media (max-width: 480px) {
+  .help-overlay-close {
+    top: 8px;
+    right: 8px;
+
+    width: 40px;
+    height: 40px;
+
+    font-size: 20px;
+  }
+}
+
+/* ===============================================================
+   OVERLAY RESPONSIVE BREAKPOINTS
+================================================================ */
+
+/* SMALL MOBILE */
+@media (max-width: 480px) {
+  .help-overlay {
+    padding: 12px;
+  }
+
+  .help-overlay-content {
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .help-overlay-content video {
+    max-height: 50vh;
+  }
+
+  .help-overlay-close {
+    font-size: 18px;
+    top: 8px;
+    right: 8px;
+  }
+}
+
+/* MOBILE / SMALL TABLET */
+@media (min-width: 481px) and (max-width: 768px) {
+  .help-overlay-content {
+    max-width: 640px;
+    padding: 18px;
+  }
+
+  .help-overlay-content video {
+    max-height: 55vh;
+  }
+}
+
+/* TABLET / SMALL DESKTOP */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .help-overlay-content {
+    max-width: 720px;
+  }
+
+  .help-overlay-content video {
+    max-height: 60vh;
+  }
+}
+
+/* LARGE DESKTOP */
+@media (min-width: 1025px) {
+  .help-overlay-content {
+    max-width: 800px;
+  }
+
+  .help-overlay-content video {
+    max-height: 65vh;
+  }
+}
+
+/* REDUCED MOTION */
+@media (prefers-reduced-motion: reduce) {
+  .help-overlay {
+    backdrop-filter: none;
+  }
+}

@@ -1,0 +1,266 @@
+/* ==================================================
+   HEADER — Responsive, Animated, High-Performance
+   --------------------------------------------------
+   Improvements:
+   • Added custom display fonts for a premium look.
+   • Strengthened GPU-acceleration using will-change.
+   • Optimized animation timing + eased transitions.
+   • Better mobile spacing and touch tap ergonomics.
+   • Cleaner logic for inline BackButton alignment.
+================================================== */
+
+.header {
+  /* background-color: #0081c8; */
+  color: #ffffff;
+
+  /* Fluid padding that adapts to all device sizes */
+  padding: clamp(12px, 2vw, 16px) 0;
+
+  /* Initial fade-in animation */
+  opacity: 0;
+  animation: headerFadeIn 0.6s ease forwards;
+  animation-delay: 0.05s;
+
+  /* Helps GPU optimize transform + opacity */
+  will-change: transform, opacity;
+
+  /* Prevents jumps during logo load */
+  backface-visibility: hidden;
+}
+
+.header-container {
+  max-width: 1200px;
+  margin: 0 auto;
+
+  padding: 0 clamp(12px, 2vw, 16px);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  /* Gap between logo, title-row, and subtitle */
+  gap: clamp(8px, 1vw, 14px);
+}
+
+/* ==================================================
+   LOGO — centered, responsive
+================================================== */
+
+.header-logo {
+  height: clamp(42px, 6vw, 60px);
+  transition: transform 0.25s ease;
+  will-change: transform;
+}
+
+.header-logo:hover {
+  transform: scale(1.05);
+}
+
+/* ==================================================
+   ROW 2 — BackButton INLINE + H1 TITLE
+   --------------------------------------------------
+   • BackButton sits absolutely on the left
+   • Title remains perfectly centered
+================================================== */
+
+.header-title-row {
+  width: 100%;
+  position: relative;
+
+  display: flex;
+  align-items: center; /* Vertically aligned with H1 */
+  justify-content: center;
+
+  margin-top: 4px;
+}
+
+/* INLINE BackButton positioning */
+.header-title-row .back-button.inline {
+  position: absolute;
+  left: 0;
+  top: 50%;
+
+  transform: translateY(-50%);
+  padding: 6px 10px;
+
+  background: transparent;
+  border: none;
+  box-shadow: none;
+
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 600;
+
+  cursor: pointer;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  will-change: opacity, transform;
+}
+
+/* Back arrow sizing */
+.header-title-row .back-button.inline .back-arrow svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Hide labels on mobile → icon-only mode */
+@media (max-width: 520px) {
+  .header-title-row .back-button.inline .back-label--long,
+  .header-title-row .back-button.inline .back-label--short {
+    display: none;
+  }
+
+  /* Increase tap precision on mobile */
+  .header-title-row .back-button.inline {
+    padding: 8px;
+  }
+}
+
+/* ==================================================
+   TITLE + SUBTITLE
+================================================== */
+
+.header-title {
+  margin: 0;
+
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 1.9rem);
+  font-weight: 700;
+  text-align: center;
+
+  width: 100%;
+
+  /* Slight text enhancement */
+  letter-spacing: 0.3px;
+}
+
+/* Subtitle */
+.header-subtitle {
+  margin: 0;
+
+  font-family: var(--font-display);
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
+  font-weight: 500;
+
+  padding: clamp(4px, 1vw, 6px) clamp(10px, 2vw, 14px);
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.15);
+
+  /* Subtle shadow improves readability over backgrounds */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+
+  transition: background-color 0.25s ease, transform 0.25s ease;
+}
+
+/* Slight hover lift (desktop only) */
+@media (hover: hover) {
+  .header-subtitle:hover {
+    background-color: rgba(0, 0, 0, 0.25);
+    transform: scale(1.02);
+  }
+}
+
+/* ==================================================
+   MOBILE REFINEMENTS
+================================================== */
+
+@media (max-width: 480px) {
+  .header {
+    padding: 12px 0;
+  }
+}
+
+/* ==================================================
+   HEADER ANIMATIONS — ENTER / EXIT
+================================================== */
+
+@keyframes headerFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.header.page-enter.forward {
+  animation: headerEnterForward 0.45s ease forwards;
+}
+
+@keyframes headerEnterForward {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.header.page-enter.back {
+  animation: headerEnterBack 0.45s ease forwards;
+}
+
+@keyframes headerEnterBack {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.header.page-exit {
+  animation: headerExit 0.35s ease forwards;
+}
+
+@keyframes headerExit {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
+/* ==================================================
+   ACCESSIBILITY & REDUCED MOTION
+================================================== */
+
+.header:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Prevent overlap on small screens */
+@media (max-width: 520px) {
+  .header-title-row {
+    padding-left: 20px; /* reserve space for back button */
+  }
+
+  .header-title-row .back-button.inline {
+    left: 6px;
+  }
+}

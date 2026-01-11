@@ -1,0 +1,225 @@
+/* ============================================================================
+   PIN ACCESS MODAL
+   ----------------------------------------------------------------------------
+   • Blocks calendar until PIN is verified
+   • Used for forced and optional login
+   • Fully responsive (mobile → desktop)
+============================================================================ */
+
+/* ============================================================
+   BACKDROP (FULL-SCREEN OVERLAY)
+============================================================ */
+.pin-backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+
+  background: rgba(0, 0, 0, 0.6);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 9999;
+}
+
+/* ============================================================
+   MODAL CONTAINER
+============================================================ */
+.pin-modal {
+  background: #ffffff;
+  width: 90%;
+  max-width: 360px;
+  padding: 24px;
+  border-radius: 12px;
+
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.3);
+  text-align: center;
+
+  animation: pinFadeIn 0.2s ease-out;
+}
+
+/* ============================================================
+   TITLE
+============================================================ */
+.pin-modal h2 {
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* ============================================================
+   PIN INPUT WRAPPER (FOR EYE ICON)
+============================================================ */
+.pin-input-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 12px;
+
+  /* Prevent modal-level centering from affecting input + icon */
+  text-align: left;
+}
+
+/* PIN INPUT FIELD (ONLY THIS INPUT) */
+.pin-input-wrapper input {
+  width: 100%;
+  padding: 12px 44px 12px 12px; /* space for eye */
+  font-size: 16px;
+
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+
+  box-sizing: border-box;
+  text-align: left;
+
+  /* 🔑 Put input BELOW the eye icon */
+  position: relative;
+  z-index: 1;
+}
+
+/* Focus state */
+.pin-input-wrapper input:focus {
+  border-color: #0284c7;
+  outline: 2px solid #0284c7;
+  outline-offset: 0;
+}
+
+/* ============================================================
+   👁️ PIN VISIBILITY TOGGLE
+   ------------------------------------------------------------
+   • Positioned inside PIN input
+   • Always visible above the input
+   • Not affected by modal button styles
+============================================================ */
+.pin-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+
+  background: transparent;
+  border: none;
+  padding: 4px;
+
+  font-size: 18px;
+  line-height: 1;
+
+  cursor: pointer;
+  color: #6b7280;
+
+  /* Ensure icon is above the input field */
+  z-index: 2;
+
+  /* Prevent modal button styles from stretching/centering it */
+  width: auto;
+}
+
+/* Hover state */
+.pin-toggle:hover {
+  color: #111827;
+}
+
+/* Keyboard accessibility */
+.pin-toggle:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   ERROR MESSAGE
+============================================================ */
+.pin-error {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #dc2626;
+}
+
+/* ============================================================
+   PRIMARY BUTTON (VERIFY)
+============================================================ */
+/* Primary buttons inside modal (Verify, etc.) */
+/* Primary action button ONLY (Verify) */
+.pin-modal button:not(.pin-toggle):not(.pin-cancel) {
+  width: 100%;
+  padding: 12px;
+
+  font-size: 15px;
+  font-weight: 500;
+
+  border-radius: 8px;
+  border: none;
+
+  cursor: pointer;
+  background-color: #0284c7;
+  color: #ffffff;
+}
+
+/* ============================================================
+   CANCEL BUTTON
+============================================================ */
+.pin-modal .pin-cancel {
+  background: transparent !important;
+  color: #374151;
+
+  font-size: 14px;
+  font-weight: 500;
+
+  border: none;
+  box-shadow: none;
+
+  margin-top: 8px;
+  padding: 8px;
+
+  cursor: pointer;
+}
+
+.pin-modal .pin-cancel:hover {
+  text-decoration: underline;
+}
+
+.pin-modal .pin-cancel:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.pin-modal .pin-cancel {
+  width: auto;
+  margin: 8px auto 0;
+  display: block;
+}
+
+/* ============================================================
+   BACKDROP FADE ANIMATION
+============================================================ */
+
+.pin-backdrop {
+  animation: backdropFadeIn 0.25s ease-out;
+}
+
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+
+
+/* ============================================================
+   ANIMATION
+============================================================ */
+@keyframes pinFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

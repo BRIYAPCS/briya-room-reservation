@@ -1,0 +1,104 @@
+/* ==================================================
+   BREADCRUMBS
+   Clean, modern, responsive breadcrumb navigation
+================================================== */
+
+/* ------------------------------------------------------------------
+   DEFAULT BREADCRUMB STYLING
+   • Used on dark backgrounds (Rooms page, header areas)
+   • Text is WHITE by default
+------------------------------------------------------------------ */
+
+.breadcrumbs {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 10px 24px;
+
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  font-size: 0.9rem;
+  color: #ffffffaa; /* semi-transparent white */
+}
+
+/* Individual crumb wrapper */
+.crumb {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Breadcrumb button styled like a text link */
+.breadcrumb-link {
+  background: none;
+  border: none;
+  padding: 0;
+
+  font: inherit;
+  color: #ffffffaa; /* default white text */
+  cursor: pointer;
+
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.breadcrumb-link:hover {
+  color: #ffffff;
+}
+
+/* Current (active) breadcrumb */
+.crumb-current {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+/* Separator (›) */
+.crumb-separator {
+  color: #ffffff66;
+  margin: 0 4px;
+  font-size: 1.1rem;
+}
+
+/* ------------------------------------------------------------------
+   MOBILE ADJUSTMENTS
+------------------------------------------------------------------ */
+@media (max-width: 600px) {
+  .breadcrumbs {
+    font-size: 0.85rem;
+    padding: 8px 16px;
+  }
+}
+
+/* ==================================================
+   CALENDAR PAGE OVERRIDES
+   • Text color ONLY (no background changes)
+   • Applied when breadcrumbs are rendered
+     inside .room-calendar-wrapper
+   • Used on Calendar.jsx (light background)
+================================================== */
+
+.room-calendar-wrapper .breadcrumbs {
+  color: #1f2937; /* slate-800 (dark text) */
+}
+
+/* Calendar breadcrumb links */
+.room-calendar-wrapper .breadcrumb-link {
+  color: #2563eb; /* Briya blue */
+  font-weight: 600;
+}
+
+.room-calendar-wrapper .breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+/* Calendar current breadcrumb */
+.room-calendar-wrapper .crumb-current {
+  color: #111827; /* near-black */
+}
+
+/* Calendar separator */
+.room-calendar-wrapper .crumb-separator {
+  color: #9ca3af; /* gray-400 */
+}
