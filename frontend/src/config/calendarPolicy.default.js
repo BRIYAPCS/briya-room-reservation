@@ -37,7 +37,7 @@ export const DEFAULT_CALENDAR_POLICY = Object.freeze({
   time: {
     // BUSINESS HOURS (LOCAL WALL TIME)
     min: new Date(1970, 0, 1, 8, 0, 0),   // 08:00 AM
-    max: new Date(1970, 0, 1, 18, 0, 0),  // 06:00 PM
+    max: new Date(1970, 0, 1, 22, 0, 0),  // 10:00 PM
 
     // SLOT SIZE (minutes)
     slotMinutes: 15,

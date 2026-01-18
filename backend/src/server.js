@@ -5,20 +5,32 @@
 // Responsibilities:
 // • Load environment variables
 // • Start Express API server
-// • Initialize MySQL connection retry loop
+// • Initialize MySQL connection retry loop (non-blocking)
 // • Enable LAN access (not localhost-only)
-// • Handle graceful shutdown (SIGINT, SIGTERM, etc.)
+// • Handle graceful shutdown (SIGINT, SIGTERM, SIGHUP)
 // -----------------------------------------------------------------------------
 
-// Load environment variables early
+
+// -----------------------------------------------------------------------------
+// LOAD ENVIRONMENT VARIABLES EARLY
+// -----------------------------------------------------------------------------
 import dotenv from "dotenv";
 dotenv.config();
 
-// Import Express app
+// -----------------------------------------------------------------------------
+// IMPORT EXPRESS APP
+// -----------------------------------------------------------------------------
 import app from "./app.js";
 
-// Import MySQL utilities
-import { testDbConnection, pool } from "./db/mysql.js";
+// -----------------------------------------------------------------------------
+// IMPORT MYSQL LIFECYCLE UTILITIES
+// -----------------------------------------------------------------------------
+// IMPORTANT:
+// • testDbConnection() handles retry logic internally
+// • closeDbPool() is the ONLY safe way to shut down MySQL
+// • NEVER call pool.end() directly outside mysql.js
+// -----------------------------------------------------------------------------
+import { testDbConnection, closeDbPool } from "./db/mysql.js";
 
 // -----------------------------------------------------------------------------
 // CONFIGURATION
@@ -27,28 +39,30 @@ import { testDbConnection, pool } from "./db/mysql.js";
 // API port (default: 4000)
 const PORT = process.env.PORT || 4000;
 
-// IMPORTANT:
-// Bind to 0.0.0.0 so the backend is reachable from:
+// Bind to all interfaces so the backend is reachable from:
 // • localhost
-// • other devices on the LAN (phones, tablets, kiosks)
+// • other devices on the LAN
 // • Docker / VM networks
-// • future cloud hosts (Linode)
+// • future cloud hosts
 const HOST = "0.0.0.0";
 
 // -----------------------------------------------------------------------------
 // DATABASE CONNECTION (NON-BLOCKING)
 // -----------------------------------------------------------------------------
-// Start MySQL retry loop without blocking server startup.
-// This allows the API to boot even if MySQL is temporarily unavailable.
-
+// Start MySQL readiness check WITHOUT blocking server startup.
+//
+// Behavior:
+// • If DB is up → dbReady flips true
+// • If DB is down → retries forever in background
+// • API still boots so health checks & error messages work
+// -----------------------------------------------------------------------------
 testDbConnection().catch(() => {
-  // Intentionally silent — retries handled inside mysql.js
+  // Intentionally silent — retry loop is handled inside mysql.js
 });
 
 // -----------------------------------------------------------------------------
 // START HTTP SERVER
 // -----------------------------------------------------------------------------
-
 const server = app.listen(PORT, HOST, () => {
   console.log("🚀 Backend API started");
   console.log(`📡 Listening on http://${HOST}:${PORT}`);
@@ -56,32 +70,48 @@ const server = app.listen(PORT, HOST, () => {
 });
 
 // -----------------------------------------------------------------------------
-// GRACEFUL SHUTDOWN
+// GRACEFUL SHUTDOWN (SINGLE CONTROLLED PATH)
 // -----------------------------------------------------------------------------
-// Ensures clean shutdown when:
-// • Ctrl+C (SIGINT)
-// • Docker stop / system shutdown (SIGTERM)
-// • Process reload (SIGHUP)
+// WHY THIS EXISTS:
+// • Prevents MySQL race conditions on Ctrl+C
+// • Prevents retry loop from resurrecting closed pools
+// • Ensures clean exit for:
+//     - Ctrl+C (SIGINT)
+//     - Docker stop / system shutdown (SIGTERM)
+//     - Process reloads (SIGHUP)
+// -----------------------------------------------------------------------------
+let shuttingDown = false;
 
 async function shutdown(signal) {
+  // Prevent double execution
+  if (shuttingDown) return;
+  shuttingDown = true;
+
   console.log(`\n🛑 Received ${signal}. Shutting down gracefully...`);
 
   try {
-    // Close MySQL connection pool
-    await pool.end();
-    console.log("✅ MySQL pool closed");
+    // 🔐 Correct MySQL shutdown (delegated to mysql.js)
+    await closeDbPool();
   } catch (err) {
-    console.error("❌ Error closing MySQL pool:", err.message);
+    console.error("❌ Error during MySQL shutdown:", err.message);
   }
 
-  // Close HTTP server
+  // Stop accepting new HTTP connections
   server.close(() => {
     console.log("👋 HTTP server closed");
     process.exit(0);
   });
+
+  // Failsafe: force exit if something hangs
+  setTimeout(() => {
+    console.warn("⚠️ Force exiting after timeout");
+    process.exit(1);
+  }, 10_000);
 }
 
-// Register signal handlers
+// -----------------------------------------------------------------------------
+// REGISTER SIGNAL HANDLERS
+// -----------------------------------------------------------------------------
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 process.on("SIGHUP", shutdown);

@@ -1,6 +1,11 @@
 {
   "name": "briya-room-reservations",
   "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "briya-calendar-core"
+  ],
   "scripts": {
     "dev": "concurrently -k -n BACKEND,WORKER,FRONTEND -c blue,magenta,green \"npm run dev --prefix backend\" \"npm run worker --prefix backend\" \"npm run dev --prefix frontend\"",
     "backend": "npm run dev --prefix backend",
@@ -11,6 +16,6 @@
     "concurrently": "^9.0.0"
   },
   "dependencies": {
-    "@lottiefiles/dotlottie-react": "^0.17.10"
+    "@briya/calendar-core": "^1.0.0"
   }
 }

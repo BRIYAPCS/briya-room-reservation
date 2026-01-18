@@ -1,13 +1,17 @@
-// backend/src/db/mysql.js
+// mysql.js
 // -----------------------------------------------------------------------------
-// Centralized MySQL connection layer with resilient auto-recovery
+// Centralized MySQL connection manager
 //
-// Responsibilities:
-// • Maintain a shared MySQL pool
-// • Retry connection automatically in background
-// • Expose `dbReady` flag for controllers
-// • Log ONLY meaningful connection state changes
-// • Never crash the backend due to DB outages
+// Features:
+// • Automatic reconnection (infinite retry loop)
+// • Pool recreation on failure
+// • dbReady flag for controllers (graceful degradation)
+// • Graceful shutdown support (safe pool close)
+//
+// CRITICAL TIMEZONE GUARANTEE:
+// • MySQL DATETIME has NO timezone
+// • mysql2 defaults convert DATETIME → JS Date → UTC drift
+// • dateStrings: true prevents all timezone corruption
 // -----------------------------------------------------------------------------
 
 import mysql from "mysql2/promise";
@@ -16,26 +20,17 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // -----------------------------------------------------------------------------
-// Configuration
+// STATE
 // -----------------------------------------------------------------------------
+let pool = null;
+export let dbReady = false;
+let shuttingDown = false;
+
+// Retry delay (ms)
 const RETRY_DELAY_MS = 5000;
 
 // -----------------------------------------------------------------------------
-// DB readiness flag (imported by controllers)
-// -----------------------------------------------------------------------------
-export let dbReady = false;
-
-// -----------------------------------------------------------------------------
-// Internal state (NOT exported)
-// -----------------------------------------------------------------------------
-let pool = null;
-
-// Tracks LAST known connection state to avoid log spam
-// Possible values: "UP" | "DOWN"
-let lastConnectionState = "DOWN";
-
-// -----------------------------------------------------------------------------
-// Create (or recreate) MySQL pool
+// CREATE POOL
 // -----------------------------------------------------------------------------
 function createPool() {
   pool = mysql.createPool({
@@ -43,54 +38,74 @@ function createPool() {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
+
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
+
+    // 🔐 CRITICAL: keep DATETIME as string
+    dateStrings: true,
   });
 }
 
-// Create initial pool immediately on startup
+// Create initial pool immediately
 createPool();
 
 // -----------------------------------------------------------------------------
-// Expose pool for controllers
-// -----------------------------------------------------------------------------
-export { pool };
-
-// -----------------------------------------------------------------------------
-// Test DB connection with auto-retry (NON-BLOCKING)
-// -----------------------------------------------------------------------------
-// This function:
-// • Tries to connect
-// • Updates dbReady flag
-// • Logs ONLY on state transitions (UP ↔ DOWN)
-// • Reattempts connection forever in background
+// DB READINESS CHECK (AUTO-RETRY)
 // -----------------------------------------------------------------------------
 export async function testDbConnection() {
+  // Do not retry once shutdown starts
+  if (shuttingDown) return;
+
   try {
-    const connection = await pool.getConnection();
-    connection.release();
+    const conn = await pool.getConnection();
+    await conn.query("SELECT 1");
+    conn.release();
+
+    if (!dbReady) {
+      console.log("✅ MySQL connected");
+    }
 
     dbReady = true;
-
-    // 🔔 Log ONLY when transitioning from DOWN → UP
-    if (lastConnectionState !== "UP") {
-      console.log("✅ MySQL connected / reconnected successfully");
-      lastConnectionState = "UP";
-    }
   } catch (err) {
+    if (dbReady) {
+      console.error("❌ MySQL connection lost");
+    } else {
+      console.error("❌ MySQL unavailable, retrying...");
+    }
+
     dbReady = false;
 
-    // 🔔 Log ONLY when transitioning from UP → DOWN
-    if (lastConnectionState !== "DOWN") {
-      console.error("❌ MySQL connection lost");
-      lastConnectionState = "DOWN";
+    // Retry unless shutting down
+    if (!shuttingDown) {
+      setTimeout(() => {
+        createPool();       // 🔥 recreate poisoned pool
+        testDbConnection(); // 🔁 retry
+      }, RETRY_DELAY_MS);
     }
-
-    // Background retry (auto-healing)
-    setTimeout(() => {
-      createPool(); // 🔄 recreate pool
-      testDbConnection(); // 🔁 retry connection
-    }, RETRY_DELAY_MS);
   }
 }
+
+// -----------------------------------------------------------------------------
+// GRACEFUL SHUTDOWN (SINGLE SAFE EXIT)
+// -----------------------------------------------------------------------------
+export async function closeDbPool() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  if (!pool) return;
+
+  try {
+    console.log("🧹 Closing MySQL pool...");
+    await pool.end();
+    console.log("✅ MySQL pool closed");
+  } catch (err) {
+    console.error("❌ Error closing MySQL pool:", err.message);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// EXPORT POOL (READ-ONLY USAGE)
+// -----------------------------------------------------------------------------
+export { pool };

@@ -31,8 +31,9 @@ import enUS from "date-fns/locale/en-US";
 import Breadcrumbs from "./Breadcrumbs";
 import ReservationModal from "./ReservationModal";
 
-import { getCalendarPolicy } from "../policies/calendarPolicy";
-import { isWeekend, mapReservationsToEvents } from "../utils/calendarUtils";
+import { getCalendarPolicy } from "../policies/calendarPolicy.adapter";
+import { mapReservationsToEvents } from "../utils/calendarUtils";
+
 import { toMySQLDateTime } from "../utils/reservationDateTime";
 
 import {
@@ -43,6 +44,8 @@ import {
 
 import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import "../css/roomCalendar.css";
+import { isWeekend } from "../policies/calendarPolicy.adapter";
+
 
 /* ------------------------------------------------------------------
    CALENDAR POLICY — SINGLE SOURCE OF TRUTH
@@ -51,6 +54,7 @@ import "../css/roomCalendar.css";
    • All business-hour logic + weekend logic must come from here
    • Later, your admin dashboard can swap / update this policy
 ------------------------------------------------------------------ */
+
 const policy = getCalendarPolicy();
 
 /* =============================================================================

@@ -1,15 +1,19 @@
 {
-  "name": "forntend",
+  "name": "frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
+
   "dependencies": {
+    "@briya/calendar-core": "*",
+
     "@lottiefiles/dotlottie-react": "^0.17.10",
     "date-fns": "^4.1.0",
     "open": "^11.0.0",
@@ -19,6 +23,7 @@
     "react-router-dom": "^7.10.1",
     "react-swipeable": "^7.0.2"
   },
+
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@types/react": "^19.2.5",

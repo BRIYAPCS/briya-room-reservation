@@ -25,9 +25,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "../css/reservationModal.css";
 
-import { getCalendarPolicy } from "../policies/calendarPolicy";
-
-
 import {
   combineDateAndTime,
   toInputDate,
@@ -39,26 +36,11 @@ import {
   toMySQLDateTime,
 } from "../utils/reservationDateTime";
 
+import {
+  getCalendarPolicy,
+  validateReservationRange,
+} from "../policies/calendarPolicy.adapter";
 
-// import {
-//   IS_WEEKENDS_ENABLED,
-//   isWeekend,
-//   CALENDAR_MIN_TIME,
-//   CALENDAR_MAX_TIME,
-//   TIME_SLOT_MINUTES,
-// } from "../utils/calendarUtils";
-
-import { validateReservationRange } from "../utils/reservationValidation";
-
-
-/* ------------------------------------------------------------------
-   CALENDAR POLICY — SINGLE SOURCE OF TRUTH
-   ------------------------------------------------------------------
-   IMPORTANT:
-   • This object defines ALL calendar behavior
-   • Do NOT hardcode time slots or weekend rules anywhere else
-   • Future admin dashboard will update this policy dynamically
------------------------------------------------------------------- */
 const policy = getCalendarPolicy();
 
 /* ------------------------------------------------------------------

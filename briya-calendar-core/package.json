@@ -1,0 +1,10 @@
+{
+  "name": "@briya/calendar-core",
+  "version": "1.0.0",
+  "description": "Shared calendar business rules and validation engine for Briya Room Reservation system",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.js"
+  }
+}
