@@ -73,6 +73,6 @@ export const DEFAULT_CALENDAR_POLICY = Object.freeze({
     // (converted to Date internally where needed)
     scrollToTime: "08:00",
 
-    defaultView: "week",
+    defaultView: "work_week",
   },
 });
