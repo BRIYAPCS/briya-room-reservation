@@ -6,7 +6,7 @@ import open from "open";
 // Vite Configuration — LAN Accessible + Stable HMR
 // --------------------------------------------------------------
 
-const DEV_LAN_IP = "192.168.0.75"; // 🔁 CHANGE THIS IF YOUR IP CHANGES
+const DEV_LAN_IP = "192.168.0.33"; // 🔁 CHANGE THIS IF YOUR IP CHANGES
 
 export default defineConfig({
   plugins: [

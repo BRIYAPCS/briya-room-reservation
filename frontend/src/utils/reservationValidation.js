@@ -1,31 +1,53 @@
 // src/utils/reservationValidation.js
-// ------------------------------------------------------------
-// Reservation validation rules
+// -----------------------------------------------------------------------------
+// RESERVATION VALIDATION ENGINE
 //
-// Enforces:
-// • Weekend rules (rule-driven)
-// • Business hours
-// • Valid date ranges
-// • Recurrence safety (Model C)
+// PURPOSE:
+// This file enforces ALL business rules related to reservations.
 //
-// IMPORTANT:
-// • Validation ≠ rendering
-// • Long reservations MAY span weekends
-// • Start / End dates must obey weekend rules
-// ------------------------------------------------------------
+// It is intentionally:
+// • UI-agnostic
+// • Calendar-agnostic
+// • Backend-parity friendly
+//
+// VALIDATION ≠ RENDERING
+// -----------------------------------------------------------------------------
+// Rendering logic lives in:
+// • RoomCalendar.jsx
+// • ReservationModal.jsx
+//
+// Validation logic lives HERE.
+//
+// WHY THIS MATTERS:
+// • Prevents inconsistent rules across UI / backend
+// • Makes recurrence and approvals safe
+// • Enables future dashboard-driven rules
+// -----------------------------------------------------------------------------
 
-import { IS_WEEKENDS_ENABLED } from "./calendarUtils";
+/* ------------------------------------------------------------------
+   DATE HELPERS (PURE FUNCTIONS)
+------------------------------------------------------------------ */
 
-/** Sunday = 0 ... Saturday = 6 */
+/**
+ * Returns true if a given date falls on a weekend.
+ *
+ * IMPORTANT:
+ * • Uses LOCAL time
+ * • Pure function (no side effects)
+ */
 function isWeekend(date) {
   const d = new Date(date);
-  const day = d.getDay();
+  const day = d.getDay(); // Sunday = 0 ... Saturday = 6
   return day === 0 || day === 6;
 }
 
 /**
- * True if ANY date touched by the range is a weekend
- * (used only when full exclusion is required)
+ * Returns true if ANY calendar day touched by the range
+ * includes a weekend.
+ *
+ * NOTE:
+ * • Used only for strict exclusion cases
+ * • Long reservations MAY span weekends unless policy forbids it
  */
 function rangeTouchesWeekend(start, end) {
   const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate());
@@ -35,13 +57,20 @@ function rangeTouchesWeekend(start, end) {
     if (isWeekend(cur)) return true;
     cur.setDate(cur.getDate() + 1);
   }
+
   return false;
 }
 
+/* ------------------------------------------------------------------
+   BUSINESS HOURS VALIDATION
+------------------------------------------------------------------ */
+
 /**
- * Business hours validator
- * - Start time must be within business hours
- * - End time must be within business hours
+ * Ensures start and end times fall within business hours.
+ *
+ * IMPORTANT:
+ * • Business hours come from POLICY (never hardcoded)
+ * • Date portion is irrelevant — only clock time matters
  */
 function isWithinBusinessHours(start, end, businessStartHour, businessEndHour) {
   const startMinutes = start.getHours() * 60 + start.getMinutes();
@@ -56,24 +85,38 @@ function isWithinBusinessHours(start, end, businessStartHour, businessEndHour) {
   return true;
 }
 
+/* ------------------------------------------------------------------
+   MAIN VALIDATION FUNCTION
+------------------------------------------------------------------ */
 /**
- * MAIN VALIDATION FUNCTION
+ * Validates a reservation date range against calendar policy.
+ *
  * Used by:
  * • ReservationModal.jsx
- * • Backend controllers (future parity)
+ * • (Future) Backend controllers for parity
+ *
+ * GUARANTEES:
+ * ------------------------------------------------------------------
+ * • No Date mutation
+ * • No timezone guessing
+ * • Deterministic validation results
  */
 export function validateReservationRange({
   start,
   end,
-  businessStartHour,
-  businessEndHour,
-
-  // Recurrence (Model C – optional)
-  isRecurring = false,
-  repeatEndDate = null,
+  policy,
+  isRecurring,
+  repeatEndDate,
 }) {
   const errors = [];
 
+  // ------------------------------------------------------------
+  // BUSINESS HOURS — SINGLE SOURCE OF TRUTH
+  // ------------------------------------------------------------
+  const businessStartHour = policy.time.min.getHours();
+  const businessEndHour = policy.time.max.getHours();
+
+  // Defensive cloning (never mutate caller objects)
   const s = new Date(start);
   const e = new Date(end);
 
@@ -92,10 +135,13 @@ export function validateReservationRange({
   /* ------------------------------------------------------------
      WEEKEND RULES (START / END ONLY)
      ------------------------------------------------------------
-     ✔ Allows long reservations across weekends
-     ✖ Disallows starting or ending on weekends
+     ✔ Allows long reservations spanning weekends
+     ✖ Disallows starting OR ending on weekends
+     ------------------------------------------------------------
+     Policy-driven:
+     • policy.rules.allowWeekends === false → block weekends
   ------------------------------------------------------------ */
-  if (!IS_WEEKENDS_ENABLED) {
+  if (!policy.rules.allowWeekends) {
     if (isWeekend(s)) {
       errors.push("Start date cannot be on a weekend.");
     }
@@ -106,9 +152,16 @@ export function validateReservationRange({
   }
 
   /* ------------------------------------------------------------
-     BUSINESS HOURS
+     BUSINESS HOURS VALIDATION
   ------------------------------------------------------------ */
-  if (!isWithinBusinessHours(s, e, businessStartHour, businessEndHour)) {
+  if (
+    !isWithinBusinessHours(
+      s,
+      e,
+      businessStartHour,
+      businessEndHour
+    )
+  ) {
     errors.push(
       `Reservations must be within business hours (${businessStartHour}:00–${businessEndHour}:00).`
     );
@@ -117,15 +170,17 @@ export function validateReservationRange({
   /* ------------------------------------------------------------
      RECURRENCE VALIDATION (MODEL C)
      ------------------------------------------------------------
-     • Requires end date
-     • Must be after event end
-     • Must obey weekend rules
+     Rules:
+     • Recurring events MUST have an end date
+     • End date must be after event end
+     • End date must obey weekend rules
   ------------------------------------------------------------ */
   if (isRecurring) {
     if (!repeatEndDate) {
       errors.push("Recurring events require an end date.");
     } else {
-      const until = new Date(repeatEndDate);
+      // Use NOON local time to avoid DST / timezone rollover bugs
+      const until = new Date(`${repeatEndDate}T12:00:00`);
 
       if (Number.isNaN(until.getTime())) {
         errors.push("Recurring end date must be a valid date.");
@@ -134,7 +189,7 @@ export function validateReservationRange({
           errors.push("Recurring end date must be after the event end.");
         }
 
-        if (!IS_WEEKENDS_ENABLED && isWeekend(until)) {
+        if (!policy.rules.allowWeekends && isWeekend(until)) {
           errors.push("Recurring end date cannot be on a weekend.");
         }
       }

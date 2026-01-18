@@ -1,25 +1,53 @@
 // src/utils/reservationDateTime.js
-// ------------------------------------------------------------
-// Date & time helpers for the Reservation system.
+// -----------------------------------------------------------------------------
+// DATE & TIME UTILITIES — RESERVATION SYSTEM
 //
-// Goals:
-// • Keep all date/time logic centralized
-// • Avoid timezone rollover bugs (DST / UTC issues)
-// • Align modal inputs with calendar behavior
-// • Provide slot-based time snapping (30-min default)
+// PURPOSE:
+// Centralized helpers for ALL date & time handling in the reservation flow.
 //
-// NOTE:
-// • No external date libraries
-// • No calendar imports (prevents circular deps)
-// ------------------------------------------------------------
+// DESIGN GOALS:
+// -----------------------------------------------------------------------------
+// • Prevent timezone rollover bugs (DST / UTC issues)
+// • Keep LOCAL wall-time semantics (MySQL DATETIME safe)
+// • Align modal inputs with calendar grid behavior
+// • Enforce slot-based time snapping (policy-driven)
+//
+// ARCHITECTURAL RULES:
+// -----------------------------------------------------------------------------
+// ❌ No UI logic
+// ❌ No calendar rendering imports
+// ❌ No hardcoded slot durations
+//
+// ✅ Slot size comes from calendarPolicy
+// ✅ Safe to share between frontend & backend (future)
+// -----------------------------------------------------------------------------
+
+import { getCalendarPolicy } from "../policies/calendarPolicy";
 
 /* ------------------------------------------------------------------
    INTERNAL HELPERS
 ------------------------------------------------------------------ */
 
-/** Pads a number to 2 digits (e.g., 4 → "04") */
+/**
+ * Pads a number to 2 digits.
+ * Example:
+ *   4  → "04"
+ *   12 → "12"
+ */
 function pad2(n) {
   return String(n).padStart(2, "0");
+}
+
+/**
+ * Returns the ACTIVE slot size (minutes) from calendar policy.
+ *
+ * IMPORTANT:
+ * • Single source of truth
+ * • Allows dashboard-based changes later
+ * • NEVER hardcode slot minutes anywhere else
+ */
+function getSlotMinutes() {
+  return getCalendarPolicy().time.slotMinutes;
 }
 
 /* ------------------------------------------------------------------
@@ -41,11 +69,15 @@ export function toInputDate(date) {
 /**
  * Returns TODAY in "YYYY-MM-DD" (LOCAL TIME)
  * ------------------------------------------------------------
- * • Used for min= on date inputs
- * • Snaps to next valid slot to avoid "past time" bugs
+ * Used for:
+ * • min= attribute on date inputs
+ *
+ * CRITICAL:
+ * • Snaps forward to the NEXT valid slot
+ * • Prevents selecting "today" with past time
  */
-export function getTodayInputDate(slotMinutes = 30) {
-  const now = snapNowToNextSlot(slotMinutes);
+export function getTodayInputDate() {
+  const now = snapNowToNextSlot();
   return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(
     now.getDate()
   )}`;
@@ -71,8 +103,10 @@ export function toInputTime(date) {
  * @param dateStr "YYYY-MM-DD"
  * @param timeStr "HH:MM"
  *
+ * GUARANTEES:
  * • Uses LOCAL time
- * • Avoids Date.parse (no UTC shifts)
+ * • Avoids Date.parse()
+ * • No UTC or timezone shifting
  */
 export function combineDateAndTime(dateStr, timeStr) {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -85,11 +119,15 @@ export function combineDateAndTime(dateStr, timeStr) {
 ------------------------------------------------------------------ */
 
 /**
- * Clamp a Date to business hours (same day)
- * ------------------------------------------------------------
+ * Clamp a Date to business hours (same day).
+ *
  * Used when:
  * • Clicking outside allowed hours
  * • Auto-correcting invalid selections
+ *
+ * NOTE:
+ * • Business hours are passed in
+ * • This function does NOT decide policy
  */
 export function clampToBusinessHours(date, startHour, endHour) {
   const d = new Date(date);
@@ -107,21 +145,23 @@ export function clampToBusinessHours(date, startHour, endHour) {
 }
 
 /* ------------------------------------------------------------------
-   SLOT-BASED TIME SNAPPING
+   SLOT-BASED TIME SNAPPING (POLICY-DRIVEN)
 ------------------------------------------------------------------ */
 
 /**
- * Snap a time string ("HH:MM") to the NEAREST slot
- * ------------------------------------------------------------
+ * Snap a time string ("HH:MM") to the NEAREST slot.
+ *
  * Used for:
  * • START TIME inputs
  *
- * Example (30-min):
+ * Example (slot = 30):
  *   09:04 → 09:00
  *   09:16 → 09:30
  */
-export function snapTimeToNearestSlot(time, slotMinutes = 30) {
+export function snapTimeToNearestSlot(time) {
   if (!time) return time;
+
+  const slotMinutes = getSlotMinutes();
 
   const [h, m] = time.split(":").map(Number);
   const total = h * 60 + m;
@@ -131,18 +171,20 @@ export function snapTimeToNearestSlot(time, slotMinutes = 30) {
 }
 
 /**
- * Snap a time string ("HH:MM") UP to next slot
- * ------------------------------------------------------------
+ * Snap a time string ("HH:MM") UP to the next slot.
+ *
  * Used for:
  * • END TIME inputs
  * • Guarantees end ≥ start + slot
  *
- * Example (30-min):
+ * Example (slot = 30):
  *   09:01 → 09:30
  *   09:31 → 10:00
  */
-export function snapTimeUpToSlot(time, slotMinutes = 30) {
+export function snapTimeUpToSlot(time) {
   if (!time) return time;
+
+  const slotMinutes = getSlotMinutes();
 
   const [h, m] = time.split(":").map(Number);
   const total = h * 60 + m;
@@ -152,14 +194,16 @@ export function snapTimeUpToSlot(time, slotMinutes = 30) {
 }
 
 /**
- * Snap "now" FORWARD to the next valid slot
- * ------------------------------------------------------------
+ * Snap "now" FORWARD to the next valid slot.
+ *
  * CRITICAL:
  * • Prevents second-level race conditions
  * • Ensures "today + now" is always valid
- * • Matches calendar grid exactly
+ * • EXACTLY matches calendar grid
  */
-export function snapNowToNextSlot(slotMinutes = 30) {
+export function snapNowToNextSlot() {
+  const slotMinutes = getSlotMinutes();
+
   const now = new Date();
   const totalMinutes = now.getHours() * 60 + now.getMinutes();
 
@@ -183,11 +227,14 @@ export function snapNowToNextSlot(slotMinutes = 30) {
    INTERNAL FORMATTER
 ------------------------------------------------------------------ */
 
-/** Convert minutes → "HH:MM" */
+/**
+ * Convert minutes → "HH:MM"
+ *
+ * INTERNAL USE ONLY
+ */
 function minutesToHHMM(totalMinutes) {
   const hours = Math.floor(totalMinutes / 60) % 24;
   const minutes = totalMinutes % 60;
-
   return `${pad2(hours)}:${pad2(minutes)}`;
 }
 
@@ -196,16 +243,20 @@ function minutesToHHMM(totalMinutes) {
 ------------------------------------------------------------------ */
 
 /**
- * Generate time slots between business hours
- * ------------------------------------------------------------
- * Example (08:00 → 22:00, 30 min):
- * ["08:00", "08:30", "09:00", ...]
+ * Generate time slots between business hours.
+ *
+ * Example:
+ *   08:00 → 22:00 (slot = 30)
+ *   ["08:00", "08:30", "09:00", ...]
  *
  * Used by:
  * • Reservation modal dropdowns
- * • Guarantees alignment with calendar grid
+ *
+ * GUARANTEE:
+ * • Slots ALWAYS align with calendar grid
  */
-export function generateTimeSlots(minTime, maxTime, slotMinutes = 30) {
+export function generateTimeSlots(minTime, maxTime) {
+  const slotMinutes = getSlotMinutes();
   const slots = [];
 
   const startMinutes = minTime.getHours() * 60 + minTime.getMinutes();
@@ -214,8 +265,7 @@ export function generateTimeSlots(minTime, maxTime, slotMinutes = 30) {
   for (let m = startMinutes; m <= endMinutes; m += slotMinutes) {
     const h = Math.floor(m / 60);
     const mm = m % 60;
-
-    slots.push(`${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`);
+    slots.push(`${pad2(h)}:${pad2(mm)}`);
   }
 
   return slots;
@@ -227,9 +277,9 @@ export function generateTimeSlots(minTime, maxTime, slotMinutes = 30) {
 
 /**
  * Convert "HH:MM" → "h:MM AM/PM"
- * ------------------------------------------------------------
- * UI-only helper
- * Does NOT affect stored values or logic
+ *
+ * UI-only helper.
+ * Does NOT affect stored values or validation.
  */
 export function formatTime12h(time) {
   if (!time) return "";
@@ -238,27 +288,29 @@ export function formatTime12h(time) {
   const hour12 = ((h + 11) % 12) + 1;
   const suffix = h >= 12 ? "PM" : "AM";
 
-  return `${hour12}:${String(m).padStart(2, "0")} ${suffix}`;
+  return `${hour12}:${pad2(m)} ${suffix}`;
 }
 
 /* ------------------------------------------------------------------
    MYSQL DATETIME BUILDER (TIMEZONE-SAFE)
-   ------------------------------------------------------------------
-   Purpose:
-   • Convert a LOCAL Date object into a MySQL DATETIME string
-   • WITHOUT timezone shifting
-   • Preserves the exact wall-clock time selected by the user
-
-   Output:
-   • "YYYY-MM-DD HH:MM:SS"
 ------------------------------------------------------------------ */
+/**
+ * Convert a LOCAL Date object → MySQL DATETIME string.
+ *
+ * PURPOSE:
+ * • Preserve exact wall-clock time
+ * • Avoid UTC shifting
+ *
+ * Output format:
+ * • "YYYY-MM-DD HH:MM:SS"
+ */
 export function toMySQLDateTime(date) {
   const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = pad2(date.getMonth() + 1);
+  const dd = pad2(date.getDate());
 
-  const hh = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
+  const hh = pad2(date.getHours());
+  const min = pad2(date.getMinutes());
   const ss = "00";
 
   return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;

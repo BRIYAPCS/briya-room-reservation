@@ -4,11 +4,11 @@
 //
 // Responsibilities:
 // • Render Big React Calendar in CONTROLLED mode
-// • Apply rules from calendarUtils.js
-// • Grey-out & disable weekends when rule is false
+// • Apply rules from calendarPolicy (single source of truth)
+// • Grey-out & disable weekends when weekends are not allowed
 // • Allow drag & drop + resize
-// • Persist updates to MySQL (DATETIME-safe, no UTC "Z")
-// • Support continuous multi-day reservations
+// • Persist updates to backend MySQL (DATETIME-safe, no UTC "Z")
+// • Support continuous multi-day reservations (Big Calendar + split rendering)
 //
 // Adds (SAFELY):
 // • Click empty slot → Create Reservation modal
@@ -31,14 +31,8 @@ import enUS from "date-fns/locale/en-US";
 import Breadcrumbs from "./Breadcrumbs";
 import ReservationModal from "./ReservationModal";
 
-import {
-  mapReservationsToEvents,
-  CALENDAR_MIN_TIME,
-  CALENDAR_MAX_TIME,
-  IS_WEEKENDS_ENABLED,
-  isWeekend,
-} from "../utils/calendarUtils";
-
+import { getCalendarPolicy } from "../policies/calendarPolicy";
+import { isWeekend, mapReservationsToEvents } from "../utils/calendarUtils";
 import { toMySQLDateTime } from "../utils/reservationDateTime";
 
 import {
@@ -50,11 +44,28 @@ import {
 import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import "../css/roomCalendar.css";
 
+/* ------------------------------------------------------------------
+   CALENDAR POLICY — SINGLE SOURCE OF TRUTH
+   ------------------------------------------------------------------
+   IMPORTANT:
+   • All business-hour logic + weekend logic must come from here
+   • Later, your admin dashboard can swap / update this policy
+------------------------------------------------------------------ */
+const policy = getCalendarPolicy();
+
 /* =============================================================================
    RECURRENCE GUARD — INSTANCE DETECTION
+   -----------------------------------------------------------------------------
+   Why this exists:
+   • Your backend may generate expanded instances for recurring series
+   • Until "Edit series vs Edit single" is implemented, editing is blocked
 ============================================================================= */
 function isRecurringInstance(event) {
-  return event?.recurrence_id != null;
+  // Defensive: recurrence_id may exist in event.resource OR directly on event
+  return (
+    event?.resource?.recurrence_id != null ||
+    event?.recurrence_id != null
+  );
 }
 
 const RECURRENCE_BLOCK_MSG = "Recurring reservations cannot be edited yet.";
@@ -65,6 +76,10 @@ function blockRecurringAction() {
 
 /* =============================================================================
    LOCALIZER — STABLE WEEK ANCHOR (CRITICAL)
+   -----------------------------------------------------------------------------
+   Why we anchor:
+   • Big Calendar uses week start calculations that can drift based on locale
+   • Anchoring makes rendering deterministic across environments
 ============================================================================= */
 const WEEK_ANCHOR = startOfWeek(new Date(2020, 0, 5), { weekStartsOn: 0 });
 
@@ -81,14 +96,15 @@ const DnDCalendar = withDragAndDrop(Calendar);
 export default function RoomCalendar({ site, room, breadcrumbItems = [] }) {
   /* ===========================================================================
      STATE — RAW RESERVATIONS (DB SHAPE ONLY)
-     - NEVER store Date objects here
-     - start_time / end_time are MySQL DATETIME strings
+     ---------------------------------------------------------------------------
+     • Do NOT store Date objects here
+     • start_time / end_time are MySQL DATETIME strings
   ========================================================================== */
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
 
   /* ===========================================================================
-     STATE — CALENDAR CONTROL
+     STATE — CALENDAR CONTROL (CONTROLLED MODE)
   ========================================================================== */
   const [currentView, setCurrentView] = useState("week");
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -97,13 +113,10 @@ export default function RoomCalendar({ site, room, breadcrumbItems = [] }) {
      STATE — MODAL CONTROL
   ========================================================================== */
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState("create");
-  const [activeEvent, setActiveEvent] = useState(null);
-  const [modalStart, setModalStart] = useState(null);
-  const [modalEnd, setModalEnd] = useState(null);
-
-  const BUSINESS_START_HOUR = CALENDAR_MIN_TIME.getHours();
-  const BUSINESS_END_HOUR = CALENDAR_MAX_TIME.getHours();
+  const [modalMode, setModalMode] = useState("create"); // "create" | "edit"
+  const [activeEvent, setActiveEvent] = useState(null); // FULL DB ROW (not RBC event)
+  const [modalStart, setModalStart] = useState(null); // Date (from calendar selection)
+  const [modalEnd, setModalEnd] = useState(null); // Date (from calendar selection)
 
   /* ===========================================================================
      MODAL HELPERS
@@ -116,22 +129,9 @@ export default function RoomCalendar({ site, room, breadcrumbItems = [] }) {
     setModalOpen(true);
   }
 
-  // function openEditModal(event) {
-  //   if (isRecurringInstance(event)) {
-  //     blockRecurringAction();
-  //     return;
-  //   }
-
-  //   setModalMode("edit");
-  //   setActiveEvent(event);
-  //   setModalStart(event.start);
-  //   setModalEnd(event.end);
-  //   setModalOpen(true);
-  // }
-
   const openEditModal = useCallback(
     (event) => {
-      // 🚫 Block editing of recurring instances
+      // 🚫 Block editing of recurring instances (until series editing is built)
       if (isRecurringInstance(event)) {
         blockRecurringAction();
         return;
@@ -139,9 +139,13 @@ export default function RoomCalendar({ site, room, breadcrumbItems = [] }) {
 
       // ------------------------------------------------------------------
       // React Big Calendar event ≠ DB reservation row
-      // Normalize ID and lookup FULL reservation
+      //
+      // For split multi-day render:
+      // • event.resource.parentId may point to the original DB reservation
+      // For normal:
+      // • event.id may be the DB id
       // ------------------------------------------------------------------
-      const reservationId = Number(event.resource?.parentId ?? event.id);
+      const reservationId = Number(event?.resource?.parentId ?? event?.id);
 
       const fullReservation = reservations.find(
         (r) => Number(r.id) === reservationId
@@ -157,7 +161,7 @@ export default function RoomCalendar({ site, room, breadcrumbItems = [] }) {
       }
 
       setModalMode("edit");
-      setActiveEvent(fullReservation);
+      setActiveEvent(fullReservation); // ✅ FULL DB ROW goes to modal
       setModalStart(event.start);
       setModalEnd(event.end);
       setModalOpen(true);
@@ -171,7 +175,7 @@ export default function RoomCalendar({ site, room, breadcrumbItems = [] }) {
   }
 
   /* ===========================================================================
-     LOAD RESERVATIONS
+     LOAD RESERVATIONS (API)
   ========================================================================== */
   useEffect(() => {
     let alive = true;
@@ -180,126 +184,118 @@ export default function RoomCalendar({ site, room, breadcrumbItems = [] }) {
       try {
         setLoading(true);
         const data = await getReservationsByRoom(site.slug, room.id);
-        if (alive) setReservations(data);
+        if (alive) setReservations(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to load reservations:", err);
+        if (alive) setReservations([]);
       } finally {
         if (alive) setLoading(false);
       }
     }
 
     load();
-    return () => (alive = false);
+    return () => {
+      alive = false;
+    };
   }, [site.slug, room.id]);
 
   /* ===========================================================================
      DB → CALENDAR EVENTS
+     ---------------------------------------------------------------------------
+     mapReservationsToEvents is your transform layer:
+     • Converts MySQL DATETIME strings into Date objects (local wall time)
+     • Adds resource metadata (parentId, recurrence_id, etc.)
   ========================================================================== */
-  const events = useMemo(
-    () => mapReservationsToEvents(reservations),
-    [reservations]
-  );
+  const events = useMemo(() => {
+    return mapReservationsToEvents(reservations);
+  }, [reservations]);
 
   /* ===========================================================================
-     CALENDAR NAVIGATION
+     CALENDAR NAVIGATION (CONTROLLED)
   ========================================================================== */
   const handleViewChange = useCallback((view) => {
     setCurrentView(view);
   }, []);
 
   const handleNavigate = useCallback((date) => {
+    // Defensive clone to avoid weird mutations
     setCurrentDate(new Date(date.getTime()));
   }, []);
 
   /* ===========================================================================
-     EVENT / SLOT SELECTION
+     SELECT HANDLERS
   ========================================================================== */
-  // const handleSelectEvent = useCallback((event) => {
-  //   if (!IS_WEEKENDS_ENABLED && isWeekend(event.start)) return;
-  //   openEditModal(event);
-  // }, []);
-
   const handleSelectEvent = useCallback(
     (event) => {
-      if (!IS_WEEKENDS_ENABLED && isWeekend(event.start)) return;
+      // If weekends are disabled, do not allow interactions on weekend days
+      if (!policy.rules.allowWeekends && isWeekend(event.start)) return;
       openEditModal(event);
     },
     [openEditModal]
   );
 
   const handleSelectSlot = useCallback((slotInfo) => {
-    if (!IS_WEEKENDS_ENABLED && isWeekend(slotInfo.start)) return;
+    if (!policy.rules.allowWeekends && isWeekend(slotInfo.start)) return;
     openCreateModal(slotInfo.start, slotInfo.end);
   }, []);
 
   /* ===========================================================================
      🔑 CRITICAL FIX — BUILD FULL PUT PAYLOAD FOR DRAG / RESIZE
-     - Backend PUT validates email + other fields
-     - Drag/resize MUST NOT send partial payloads
+     ---------------------------------------------------------------------------
+     Your backend PUT validates multiple fields (title/email/etc).
+     So drag/resize MUST NOT send partial payloads.
   ========================================================================== */
   function buildEditablePutPayload(row, startDate, endDate) {
     if (!row) return null;
 
     return {
+      // Date/time updates from drag/resize
       start_time: toMySQLDateTime(startDate),
       end_time: toMySQLDateTime(endDate),
 
+      // Preserve required/editable fields so backend validation passes
       title: row.title ?? null,
       description: row.description ?? null,
-      created_by_name: row.created_by_name,
+      created_by_name: row.created_by_name ?? null,
       email: row.email ?? null,
       attendees_emails: row.attendees_emails ?? null,
 
-      // Future-safe (backend rejects series edits for now)
+      // Future-safe flag (backend can ignore or enforce later)
       edit_scope: "single",
     };
   }
 
   /* ===========================================================================
-   MODAL SUBMIT
-   ===========================================================================
-   Architecture rules:
-   • ReservationModal owns all editable fields
-     (title, description, created_by_name, email, attendees_emails, times, etc.)
-   • RoomCalendar injects ONLY contextual identifiers
-     (site_id, room_id, reservation id)
-   • Backend responses are ALWAYS authoritative
-   • Local state must reflect FULL DB rows, never partial modal payloads
-   ========================================================================== */
+     MODAL SUBMIT
+     ---------------------------------------------------------------------------
+     Ownership rules:
+     • ReservationModal owns all editable fields + builds modalPayload
+     • RoomCalendar injects site_id + room_id (context)
+     • Backend response is authoritative (always replace/append using it)
+  ========================================================================== */
   async function handleModalSubmit(modalPayload) {
     if (!modalPayload) return;
 
-    /* -------------------------------------------------------------------------
-     CREATE MODE
-     -------------------------------------------------------------------------
-     Flow:
-     1) ReservationModal validates + builds modalPayload
-     2) RoomCalendar injects site_id + room_id
-     3) Backend INSERTS and returns:
-        • Single full reservation row (non-recurring), OR
-        • { reservations: [...] } for recurring expansion
-     4) Local state is updated ONLY with backend-returned rows
-     ------------------------------------------------------------------------- */
+    // ------------------------------
+    // CREATE
+    // ------------------------------
     if (modalMode === "create") {
       const payload = {
-        // Context owned by RoomCalendar
         site_id: site.id,
         room_id: room.id,
-
-        // Forward ALL modal-owned fields verbatim
         ...modalPayload,
       };
 
       const result = await createReservation(payload);
 
-      if (result?.reservations) {
-        // Recurring expansion (already full DB rows)
+      // Backend may return:
+      // • { id: ... } single row
+      // • { reservations: [...] } for expanded recurring creation
+      if (result?.reservations && Array.isArray(result.reservations)) {
         setReservations((prev) => [...prev, ...result.reservations]);
       } else if (result?.id) {
-        // Single reservation — trust backend row
         setReservations((prev) => [...prev, result]);
       } else {
-        // Defensive guard — should never happen
         console.error("Unexpected createReservation response:", result);
       }
 
@@ -307,106 +303,45 @@ export default function RoomCalendar({ site, room, breadcrumbItems = [] }) {
       return;
     }
 
-    /* -------------------------------------------------------------------------
-     EDIT MODE (SINGLE INSTANCE ONLY)
-     -------------------------------------------------------------------------
-     Rules:
-     • Recurring instances are blocked BEFORE reaching this point
-     • modalPayload may be PARTIAL (UI-oriented)
-     • Backend response is the SINGLE source of truth
-     ------------------------------------------------------------------------- */
+    // ------------------------------
+    // EDIT (single instance only)
+    // ------------------------------
     const id = activeEvent?.id;
 
-    // 🚫 HARD BLOCK invalid or synthetic IDs
+    // 🚫 Hard block invalid IDs
     if (!Number.isInteger(Number(id))) {
       alert("This reservation cannot be edited yet.");
       return;
     }
 
-    // Persist update and capture FULL backend row
     const updated = await updateReservation(id, modalPayload);
 
     // Replace local row with backend-returned row
-    setReservations((prev) => prev.map((r) => (r.id === id ? updated : r)));
+    setReservations((prev) =>
+      prev.map((r) => (Number(r.id) === Number(id) ? updated : r))
+    );
 
     closeModal();
   }
 
   /* ===========================================================================
-   DRAG EVENT
-   ===========================================================================
-   Rules:
-   • Drag updates ONLY start/end times
-   • Backend remains authoritative for validation & normalization
-   • Local state must always store FULL DB rows
-   ========================================================================== */
+     DRAG EVENT (MOVE)
+  ========================================================================== */
   const handleEventDrop = useCallback(
     async ({ event, start, end }) => {
-      // 🚫 Block weekends if disabled
-      if (!IS_WEEKENDS_ENABLED && isWeekend(start)) return;
+      if (!policy.rules.allowWeekends && isWeekend(start)) return;
 
-      // 🚫 Block recurring instances (future-safe)
       if (isRecurringInstance(event)) {
         blockRecurringAction();
         return;
       }
 
-      // Use parentId for split weekday segments
-      const parentId = event.resource?.parentId ?? event.id;
-
-      // Source of truth for existing editable fields
-      const row = reservations.find((r) => r.id === parentId);
-
-      // Defensive guard — should never happen
-      const payload = buildEditablePutPayload(row, start, end);
-      if (!payload) return;
-
-      // -----------------------------------------------------------------------
-      // CRITICAL FIX:
-      // Capture backend response and REPLACE local row
-      // -----------------------------------------------------------------------
-      const updated = await updateReservation(parentId, payload);
-
-      setReservations((prev) =>
-        prev.map((r) => (r.id === parentId ? updated : r))
-      );
-    },
-    [reservations]
-  );
-
-  /* ===========================================================================
-   RESIZE EVENT
-   ===========================================================================
-   Rules:
-   • Resize updates ONLY start/end times
-   • Backend remains authoritative for validation & normalization
-   • Local state must always store FULL DB rows
-   ========================================================================== */
-  const handleEventResize = useCallback(
-    async ({ event, start, end }) => {
-      // 🚫 Block weekends if disabled
-      if (!IS_WEEKENDS_ENABLED && isWeekend(start)) return;
-
-      // 🚫 Block recurring instances (future-safe)
-      if (isRecurringInstance(event)) {
-        blockRecurringAction();
-        return;
-      }
-
-      // Use parentId for split weekday segments
-      const parentId = Number(event.resource?.parentId ?? event.id);
-
-      // Source of truth for existing editable fields
+      const parentId = Number(event?.resource?.parentId ?? event?.id);
       const row = reservations.find((r) => Number(r.id) === parentId);
 
-      // Defensive guard — should never happen
       const payload = buildEditablePutPayload(row, start, end);
       if (!payload) return;
 
-      // -----------------------------------------------------------------------
-      // CRITICAL FIX:
-      // Capture backend response and REPLACE local row
-      // -----------------------------------------------------------------------
       const updated = await updateReservation(parentId, payload);
 
       setReservations((prev) =>
@@ -417,17 +352,44 @@ export default function RoomCalendar({ site, room, breadcrumbItems = [] }) {
   );
 
   /* ===========================================================================
-     VISUAL RULES
+     RESIZE EVENT
+  ========================================================================== */
+  const handleEventResize = useCallback(
+    async ({ event, start, end }) => {
+      if (!policy.rules.allowWeekends && isWeekend(start)) return;
+
+      if (isRecurringInstance(event)) {
+        blockRecurringAction();
+        return;
+      }
+
+      const parentId = Number(event?.resource?.parentId ?? event?.id);
+      const row = reservations.find((r) => Number(r.id) === parentId);
+
+      const payload = buildEditablePutPayload(row, start, end);
+      if (!payload) return;
+
+      const updated = await updateReservation(parentId, payload);
+
+      setReservations((prev) =>
+        prev.map((r) => (Number(r.id) === parentId ? updated : r))
+      );
+    },
+    [reservations]
+  );
+
+  /* ===========================================================================
+     VISUAL RULES (WEEKENDS DISABLED)
   ========================================================================== */
   const dayPropGetter = useCallback((date) => {
-    if (!IS_WEEKENDS_ENABLED && isWeekend(date)) {
+    if (!policy.rules.allowWeekends && isWeekend(date)) {
       return { className: "calendar-weekend-disabled" };
     }
     return {};
   }, []);
 
   const slotPropGetter = useCallback((date) => {
-    if (!IS_WEEKENDS_ENABLED && isWeekend(date)) {
+    if (!policy.rules.allowWeekends && isWeekend(date)) {
       return { className: "calendar-weekend-disabled" };
     }
     return {};
@@ -442,6 +404,7 @@ export default function RoomCalendar({ site, room, breadcrumbItems = [] }) {
   ========================================================================== */
   return (
     <div className="room-calendar-wrapper">
+      {/* Breadcrumbs (optional) */}
       {breadcrumbItems.length > 0 && (
         <div className="calendar-breadcrumbs">
           <Breadcrumbs items={breadcrumbItems} />
@@ -457,10 +420,25 @@ export default function RoomCalendar({ site, room, breadcrumbItems = [] }) {
         onNavigate={handleNavigate}
         views={["day", "week", "work_week", "month"]}
         defaultView="week"
-        min={CALENDAR_MIN_TIME}
-        max={CALENDAR_MAX_TIME}
+
+        /* ------------------------------------------------------------------
+           BUSINESS HOURS — FROM POLICY
+           ------------------------------------------------------------------
+           Big Calendar expects Date objects for min/max.
+           policy.time.min/max should already be Date objects.
+        ------------------------------------------------------------------ */
+        min={policy.time.min}
+        max={policy.time.max}
+
+        /* ------------------------------------------------------------------
+           SLOT CONFIG
+           ------------------------------------------------------------------
+           Keep step/timeslots consistent with your time-slot engine.
+           If policy.time.slotMinutes changes later, we should align step/timeslots.
+        ------------------------------------------------------------------ */
         step={30}
         timeslots={2}
+
         showMultiDayTimes
         selectable
         resizable
@@ -479,15 +457,14 @@ export default function RoomCalendar({ site, room, breadcrumbItems = [] }) {
         style={{ height: "70vh", minHeight: "520px" }}
       />
 
+      {/* Modal (Create/Edit) */}
       <ReservationModal
         isOpen={modalOpen}
         mode={modalMode}
         roomName={room.name}
         initialStart={modalStart}
         initialEnd={modalEnd}
-        activeEvent={activeEvent}
-        businessStartHour={BUSINESS_START_HOUR}
-        businessEndHour={BUSINESS_END_HOUR}
+        activeEvent={activeEvent} // ✅ FULL DB ROW
         onClose={closeModal}
         onSubmit={handleModalSubmit}
       />

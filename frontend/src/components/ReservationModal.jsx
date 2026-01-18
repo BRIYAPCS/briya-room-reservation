@@ -25,6 +25,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "../css/reservationModal.css";
 
+import { getCalendarPolicy } from "../policies/calendarPolicy";
+
+
 import {
   combineDateAndTime,
   toInputDate,
@@ -36,24 +39,40 @@ import {
   toMySQLDateTime,
 } from "../utils/reservationDateTime";
 
-import {
-  IS_WEEKENDS_ENABLED,
-  isWeekend,
-  CALENDAR_MIN_TIME,
-  CALENDAR_MAX_TIME,
-  TIME_SLOT_MINUTES,
-} from "../utils/calendarUtils";
+
+// import {
+//   IS_WEEKENDS_ENABLED,
+//   isWeekend,
+//   CALENDAR_MIN_TIME,
+//   CALENDAR_MAX_TIME,
+//   TIME_SLOT_MINUTES,
+// } from "../utils/calendarUtils";
 
 import { validateReservationRange } from "../utils/reservationValidation";
 
+
 /* ------------------------------------------------------------------
-   BUSINESS HOURS — DERIVED FROM CALENDAR RULES
+   CALENDAR POLICY — SINGLE SOURCE OF TRUTH
    ------------------------------------------------------------------
-   Used to constrain native <input type="time"> pickers
-   Keeps modal aligned with calendar rules (single source of truth)
+   IMPORTANT:
+   • This object defines ALL calendar behavior
+   • Do NOT hardcode time slots or weekend rules anywhere else
+   • Future admin dashboard will update this policy dynamically
 ------------------------------------------------------------------ */
-const MIN_TIME_STRING = CALENDAR_MIN_TIME.toTimeString().slice(0, 5);
-const MAX_TIME_STRING = CALENDAR_MAX_TIME.toTimeString().slice(0, 5);
+const policy = getCalendarPolicy();
+
+/* ------------------------------------------------------------------
+   BUSINESS HOURS — SINGLE SOURCE OF TRUTH
+   ------------------------------------------------------------------
+   IMPORTANT:
+   • NEVER accept business hours via props
+   • Always derive from calendar policy
+   • Required for future admin dashboard toggles
+------------------------------------------------------------------ */
+
+const MIN_TIME_STRING = policy.time.min.toTimeString().slice(0, 5);
+const MAX_TIME_STRING = policy.time.max.toTimeString().slice(0, 5);
+
 
 export default function ReservationModal({
   isOpen,
@@ -61,8 +80,6 @@ export default function ReservationModal({
   roomName, // Display room name in header
   initialStart,
   initialEnd,
-  businessStartHour,
-  businessEndHour,
   activeEvent,
   onClose,
   onSubmit,
@@ -73,9 +90,8 @@ export default function ReservationModal({
   const timeOptions = useMemo(
     () =>
       generateTimeSlots(
-        CALENDAR_MIN_TIME,
-        CALENDAR_MAX_TIME,
-        TIME_SLOT_MINUTES
+        policy.time.min,
+        policy.time.max
       ),
     []
   );
@@ -98,17 +114,7 @@ export default function ReservationModal({
    • No mutation of the original Date object
    • Forward-only correction (never moves backward in time)
 --------------------------------------------------------------------------------- */
-  function normalizeToNextValidWeekday(date) {
-    // Defensive clone — preserves exact local wall-time
-    const d = new Date(date.getTime());
 
-    // Move forward until a valid weekday is reached
-    while (!IS_WEEKENDS_ENABLED && isWeekend(d)) {
-      d.setDate(d.getDate() + 1);
-    }
-
-    return d;
-  }
 
   /* ------------------------------------------------------------------
    TIME AUTO-SNAP — BUSINESS HOURS
@@ -499,16 +505,18 @@ export default function ReservationModal({
   /* ------------------------------------------------------------------
    CURRENT TIME — SNAP TO NEXT VALID SLOT
    ------------------------------------------------------------------
-   This is the single source of truth for:
-   • disabling past slots
-   • next-available hint
-   • auto-correction
------------------------------------------------------------------- */
+    This is the single source of truth for:
+    • disabling past slots
+    • next-available hint
+    • auto-correction
+  ------------------------------------------------------------------ */
   function getNowSlotMinutes() {
     const now = new Date();
     return (
-      Math.ceil((now.getHours() * 60 + now.getMinutes()) / TIME_SLOT_MINUTES) *
-      TIME_SLOT_MINUTES
+      Math.ceil(
+        (now.getHours() * 60 + now.getMinutes()) /
+          policy.time.slotMinutes
+      ) * policy.time.slotMinutes
     );
   }
 
@@ -536,7 +544,7 @@ export default function ReservationModal({
 
     // If end is now invalid, push it forward by one slot
     if (endTime <= startTime) {
-      const corrected = snapTimeUpToSlot(startTime, TIME_SLOT_MINUTES);
+      const corrected = snapTimeUpToSlot(startTime, policy.time.slotMinutes);
       setEndTime(corrected);
     }
   }, [startTime]);
@@ -622,13 +630,9 @@ export default function ReservationModal({
 
       // Ensure end is always after start (at least one slot).
       if (e <= s) {
-        e = new Date(s.getTime() + TIME_SLOT_MINUTES * 60000);
+        e = new Date(s.getTime() + policy.time.slotMinutes * 60000);
       }
     }
-
-    // Respect weekend rules (forward-only)
-    s = normalizeToNextValidWeekday(s);
-    e = normalizeToNextValidWeekday(e);
 
     setStartDate(toInputDate(s));
 
@@ -776,26 +780,19 @@ export default function ReservationModal({
       Native <input type="date"> returns YYYY-MM-DD (no timezone).
       We validate using NOON local time to avoid DST / UTC rollover bugs.
     ------------------------------------------------------------------ */
-  function handleDateChange(setter) {
-    return (e) => {
-      const value = e.target.value;
-      if (!value) return;
+    function handleDateChange(setter) {
+      return (e) => {
+        const value = e.target.value;
+        if (!value) return;
 
-      // ------------------------------------------------------------
-      // TIMEZONE-SAFE DATE CHECK
-      // Use 12:00 PM local time to prevent date shifting
-      // ------------------------------------------------------------
-      const safeDate = new Date(`${value}T12:00:00`);
+        // Use NOON to avoid DST / UTC rollover bugs
+        const safeDate = new Date(`${value}T12:00:00`);
 
-      // Enforce weekend rules
-      if (!IS_WEEKENDS_ENABLED && isWeekend(safeDate)) {
-        return; // 👈 silently reject weekend selection
-      }
+        // Store raw YYYY-MM-DD string
+        setter(value);
+      };
+    }
 
-      // Store raw YYYY-MM-DD string (DO NOT store Date object)
-      setter(value);
-    };
-  }
 
   /* ------------------------------------------------------------------
    TIME PICKER GUARD — INVALID TIMES
@@ -847,79 +844,11 @@ export default function ReservationModal({
     const nextErrors = validateReservationRange({
       start,
       end,
-      businessStartHour,
-      businessEndHour,
+      policy, // 🔑 single source of truth
       isRecurring,
       repeatEndDate,
     });
 
-    /* ------------------------------------------------------------
-     CREATE MODE — DATE & TIME VALIDATION
-     ------------------------------------------------------------
-     Rules enforced here:
-     • Start DATE cannot be before today
-     • Today IS allowed
-     • If start date is today → start TIME must be in the future
-     • End date/time rules apply only to non-recurring events
-  ------------------------------------------------------------ */
-    if (mode === "create") {
-      const now = new Date();
-
-      // Normalize dates to LOCAL midnight (timezone-safe)
-      const todayStart = new Date(now);
-      todayStart.setHours(0, 0, 0, 0);
-
-      const startDay = new Date(start);
-      startDay.setHours(0, 0, 0, 0);
-
-      /* ❌ Start date before today */
-      if (startDay < todayStart) {
-        nextErrors.push("Start date cannot be in the past.");
-      }
-
-      /* ❌ Start time in the past (today only) */
-      if (startDay.getTime() === todayStart.getTime() && start < now) {
-        nextErrors.push("Start time cannot be in the past for today.");
-      }
-
-      /* --------------------------------------------------------
-       SINGLE EVENT RULES (NON-RECURRING ONLY)
-    -------------------------------------------------------- */
-      if (!isRecurring) {
-        const endDay = new Date(end);
-        endDay.setHours(0, 0, 0, 0);
-
-        /* ❌ End date before start date */
-        if (endDay < startDay) {
-          nextErrors.push(
-            "End date must be the same day or after the start date."
-          );
-        }
-
-        /* ❌ Same day → end time before or equal to start time */
-        if (endDay.getTime() === startDay.getTime() && end <= start) {
-          nextErrors.push("End time must be after the start time.");
-        }
-      }
-    }
-
-    /* --------------------------------------------------------
-     RECURRING EVENT RULES (RECURRING ONLY)
-     --------------------------------------------------------
-     Applies to BOTH create & edit modes
-  -------------------------------------------------------- */
-    if (isRecurring) {
-      if (!repeatEndDate) {
-        nextErrors.push("Recurring events must have an end date.");
-      } else {
-        // Use NOON to avoid DST / timezone rollover
-        const repeatEnd = new Date(`${repeatEndDate}T12:00:00`);
-
-        if (repeatEnd < start) {
-          nextErrors.push("Recurring end date must be after the start date.");
-        }
-      }
-    }
 
     /* ------------------------------------------------------------
      REQUIRED FIELDS (ALL MODES)
@@ -940,19 +869,17 @@ export default function ReservationModal({
 
     setErrors(nextErrors);
   }, [
-    isOpen,
-    start,
-    end,
-    title,
-    bookedBy,
-    email,
-    attendeesEmails,
-    businessStartHour,
-    businessEndHour,
-    isRecurring,
-    repeatEndDate,
-    mode,
-  ]);
+      isOpen,
+      start,
+      end,
+      title,
+      bookedBy,
+      email,
+      attendeesEmails,
+      isRecurring,
+      repeatEndDate,
+      mode,
+    ]);
 
   /* ------------------------------------------------------------------
    FOCUS FIRST INVALID FIELD
@@ -1205,15 +1132,6 @@ export default function ReservationModal({
                   const value = e.target.value;
                   if (!value) return;
 
-                  // ------------------------------------------------------------
-                  // WEEKEND GUARD (timezone-safe)
-                  // Use NOON to avoid date rollover
-                  // ------------------------------------------------------------
-                  if (!IS_WEEKENDS_ENABLED) {
-                    const day = new Date(value + "T12:00:00").getDay();
-                    if (day === 0 || day === 6) return;
-                  }
-
                   setStartDate(value);
                 }}
                 required
@@ -1325,9 +1243,9 @@ export default function ReservationModal({
                       : undefined
                   }
                   title={
-                    !IS_WEEKENDS_ENABLED
-                      ? "Weekends are disabled. End date will auto-adjust."
-                      : ""
+                  !policy.rules.allowWeekends
+                    ? "Weekends are disabled. End date will auto-adjust."
+                    : ""
                   }
                   onChange={(e) => {
                     const value = e.target.value;
@@ -1340,11 +1258,11 @@ export default function ReservationModal({
                         • DST shifts
                         • Off-by-one-day bugs
                       ------------------------------------------------------------ */
+                    // Use NOON to avoid timezone rollover bugs
                     const raw = new Date(`${value}T12:00:00`);
-                    const normalized = normalizeToNextValidWeekday(raw);
 
-                    // Store YYYY-MM-DD only (never Date objects)
-                    setEndDate(toInputDate(normalized));
+                    // Store YYYY-MM-DD only
+                    setEndDate(toInputDate(raw));
                   }}
                   required
                 />
@@ -1382,7 +1300,7 @@ export default function ReservationModal({
                   // ------------------------------------------------------------
                   const snapped = snapTimeUpToSlot(
                     e.target.value,
-                    TIME_SLOT_MINUTES
+                    policy.time.slotMinutes
                   );
                   setEndTime(snapped);
                 }}
